@@ -1479,7 +1479,7 @@ function StatCard({ label, value, color = C.text, sub }) {
 }
 
 // ── GESTOR: Painel ──────────────────────────────────────────────────────
-function PainelTab({ texts, updateTextStatus, notifications, markNotifRead }) {
+function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={} }) {
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState(null);
