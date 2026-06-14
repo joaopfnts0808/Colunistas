@@ -1462,7 +1462,7 @@ function StatCard({ label, value, color = C.text, sub }) {
       </div>
       <div
         style={{
-          fontSize: 28,
+          fontSize: 36,
           fontWeight: 700,
           color,
           lineHeight: 1,
@@ -1571,24 +1571,28 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
       >
         <StatCard label="Total" value={texts.length} />
         <StatCard
+          label="Tarefas"
+          value={counts["Pendente"] || 0}
+          color={C.dim}
+          sub="aguardando produção"
+        />
+        <StatCard
           label="Enviados"
           value={counts["Enviado"] || 0}
           color={C.amber}
+          sub="em fila de revisão"
         />
         <StatCard
           label="Em Revisão"
           value={counts["Em Revisão"] || 0}
           color={C.purple}
+          sub="com o gestor"
         />
         <StatCard
           label="Publicados"
           value={counts["Publicado"] || 0}
           color={C.green}
-        />
-        <StatCard
-          label="Pendentes"
-          value={counts["Pendente"] || 0}
-          color={C.dim}
+          sub="no ar"
         />
       </div>
       <div
@@ -1662,8 +1666,8 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 600,
+                      fontSize: 17,
+                      fontWeight: 700,
                       color: C.text,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -2081,6 +2085,27 @@ function IdeiaTab({
             </button>
           )
         )}
+      </div>
+
+      {/* Suggestion Box — always visible above cards */}
+      <div style={{background:C.acBg,border:`2px solid ${C.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:24}}>
+        <div style={{fontSize:14,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,marginBottom:8}}>✦ Sugira uma nova pauta</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <Select value={novaCol} onChange={setNovaCol} placeholder="— colunista —"
+            options={COLUMNISTS.map(c=>({value:String(c.id),label:c.nome}))}/>
+          <Select value={novaEd} onChange={setNovaEd} placeholder="— editoria —"
+            options={novaCol?(COLUMNISTS.find(c=>c.id===Number(novaCol))?.editorias||EDITORIAS).map(e=>({value:e,label:e})):EDITORIAS.map(e=>({value:e,label:e}))}/>
+        </div>
+        <Input value={novaPauta} onChange={setNovaPauta} placeholder="Ex: A invisibilidade bissexual nos espaços queer..." style={{marginBottom:10}}/>
+        <textarea value={novaEsboco} onChange={e=>setNovaEsboco(e.target.value)}
+          placeholder="Esboço: ângulo, argumento, abordagem proposta..."
+          style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:70,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",marginBottom:10}}/>
+        <Btn variant="primary" disabled={!novaCol||!novaPauta} onClick={()=>{
+          if(!novaCol||!novaPauta)return;
+          const col=COLUMNISTS.find(c=>c.id===Number(novaCol));
+          addIdeia({colId:Number(novaCol),nome:col?.nome||"",sigla:col?.sigla||"?",editoria:novaEd||col?.editorias[0]||"",pauta:novaPauta,esboco:novaEsboco});
+          setNovaPauta("");setNovaCol("");setNovaEd("");setNovaEsboco("");
+        }}>Adicionar ao Banco de Ideias</Btn>
       </div>
 
       {/* By columnist */}
@@ -4055,8 +4080,12 @@ export default function App() {
         {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-02",dataPublicacao:"2026-06-05",status:"Publicado",dataSubmissao:"02/06/2026",link:"https://ssexbbox.com/turistas-da-submissao-voce-quer-o-fetiche-mas-nao-aguenta/",obs:"Texto inaugural"},
       ] : t;
 
-      setTexts(seedTexts);
-      if(t.length===0) save("sx2_texts", seedTexts);
+      // Seed tasks from schedule if not already in texts
+      const existingKeys = new Set(seedTexts.map(t=>t.key||"").filter(Boolean));
+      const missingTasks = TASK_SCHEDULE.filter(task => !existingKeys.has(task.key));
+      const allTexts = [...seedTexts, ...missingTasks];
+      setTexts(allTexts);
+      if(t.length===0 || missingTasks.length > 0) save("sx2_texts", allTexts);
       setContrapartidas(co);
       setContraExtraState(ce);
       setCalendar(cal);
@@ -4285,6 +4314,7 @@ export default function App() {
               updateTextStatus={updateTextStatus}
               notifications={notifications}
               markNotifRead={markNotifRead}
+              contraExtra={contraExtra}
             />
           )}
           {tab === "ideias" && (
@@ -4365,4 +4395,92 @@ export default function App() {
       )}
     </div>
   );
-}
+}const TASK_SCHEDULE = [
+  {id:20000,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_0"},
+  {id:20001,colId:6,colunistaNome:"Matheus Theodore",titulo:"Comunidade BDSM e por que é acolhedora para corpos dissidentes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-01",dataEntrega:"2026-06-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_1"},
+  {id:20002,colId:6,colunistaNome:"Matheus Theodore",titulo:"Juventude preta com gênero fluido e expressões pouco populares",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-01",dataEntrega:"2026-06-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_2"},
+  {id:20003,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_0"},
+  {id:20004,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-03",dataEntrega:"2026-06-30",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_1"},
+  {id:20005,colId:9,colunistaNome:"Moon Kenzo",titulo:"A Solidão de Quem Transcende: O preço de não ser a fácil",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-03",dataEntrega:"2026-06-30",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_2"},
+  {id:20006,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-24",dataEntrega:"2026-06-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_0"},
+  {id:20007,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Pajubá e Gualín do TTK: dialetos nascidos na ditadura militar",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-24",dataEntrega:"2026-06-21",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_1"},
+  {id:20008,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Segregades do amor: a comunidade trans e a exclusão do amor romântico",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-06",dataEntrega:"2026-07-03",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_2"},
+  {id:20009,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Desconstrução da cisheteronormatividade na arte contemporânea",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-26",dataEntrega:"2026-06-23",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_0"},
+  {id:20010,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Estética do desejo dissidente e as Não-Imagens",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-26",dataEntrega:"2026-06-23",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_1"},
+  {id:20011,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Ficção científica como ferramenta de autoconhecimento LGBTQIA+",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-06",dataEntrega:"2026-07-03",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_2"},
+  {id:20012,colId:13,colunistaNome:"Isabella Piana",titulo:"Como a heterossexualidade compulsória ainda exige que LGBT performem papéis tradicionais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-29",dataEntrega:"2026-06-26",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_0"},
+  {id:20013,colId:13,colunistaNome:"Isabella Piana",titulo:"Como a pornografia molda nossos relacionamentos e a cultura",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-29",dataEntrega:"2026-06-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_1"},
+  {id:20014,colId:13,colunistaNome:"Isabella Piana",titulo:"Isso é mais queer do que você pensa: o que a cultura queer criou e a heteronormatividade apropriou",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-08",dataEntrega:"2026-07-05",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_2"},
+  {id:20015,colId:14,colunistaNome:"Raphael Mello",titulo:"Entre o desejo e a sobrevivência: relacionamentos LGBT e afeto na contemporaneidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-08",dataEntrega:"2026-07-05",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_0"},
+  {id:20016,colId:14,colunistaNome:"Raphael Mello",titulo:"Corpos desejáveis, corpos descartáveis: o mercado afetivo dentro da comunidade LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_1"},
+  {id:20017,colId:14,colunistaNome:"Raphael Mello",titulo:"Quando sair do armário não basta: marcas psíquicas da colonialidade nos afetos LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_2"},
+  {id:20018,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Não-monogamia é mesmo uma política subversiva para homens gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_0"},
+  {id:20019,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"O corpo musculoso da bicha é um problema para quem",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-13",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_1"},
+  {id:20020,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Por que o gay preto é pra sexo e o gay branco é pra namoro — uma análise racial dos afetos gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_2"},
+  {id:20021,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Como a geração Z está preservando e inovando os ballrooms",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-13",dataEntrega:"2026-07-10",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_0"},
+  {id:20022,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Entrevistas LGBTQIAPN+ das décadas de 50 a 90 com documentos de memória afetiva",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-12",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_1"},
+  {id:20023,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"O que as práticas sexuais de pessoas trans revelam sobre como a sociedade as enxerga",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-05",dataEntrega:"2026-08-02",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_2"},
+  {id:20024,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Sexo, afeto e liberdade: desaprendendo padrões para criar relações mais honestas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-12",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_0"},
+  {id:20025,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"O corpo como território político: o que nossos desejos dizem sobre quem somos",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_1"},
+  {id:20026,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Prazer também é política: como o corpo se torna espaço de autonomia e resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-05",dataEntrega:"2026-08-02",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_2"},
+  {id:20027,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Vida e memória insubmissas de pessoas LGBTQIA+ interioranas",editoria:"História e Memória Política",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_0"},
+  {id:20028,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Economia política do sexo no mundo globalizado",editoria:"História e Memória Política",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_1"},
+  {id:20029,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Relações de gênero e educação voltadas à diferença",editoria:"História e Memória Política",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_2"},
+  {id:20030,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"O corpo do artista queer contemporâneo: na poesia, no teatro, na fotografia",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_0"},
+  {id:20031,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"Literatura lésbica brasileira: o erotismo nas obras",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_1"},
+  {id:20032,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"A rua e o flâneur queer: sempre estivemos nas ruas e a rua sempre foi o lugar do nosso desejo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_2"},
+  {id:20033,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpos femininos e a proteção contra ISTs",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-19",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_0"},
+  {id:20034,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpo e Ocupação: em quais lugares estamos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_1"},
+  {id:20035,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Quem dita a palavra do corpo feminino",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_2"},
+  {id:20036,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Do queer ao cuir: a dissidência reinventada pelo cinema latino-americano",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_0"},
+  {id:20037,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Cinema queer nordestino: corpos dissidentes longe do eixo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_1"},
+  {id:20038,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"O fim inevitável: repensando o sofrimento LGBTQIA+ nas telas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_2"},
+  {id:20039,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Discutindo relações gays: dinâmicas e tabus",editoria:"História e Memória Política",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_0"},
+  {id:20040,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Homens gays 40+: escolhas e sacrifícios",editoria:"História e Memória Política",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-26",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_1"},
+  {id:20041,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Solidão homoafetiva e seus desafios",editoria:"História e Memória Política",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-09",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_2"},
+  {id:20042,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O techno como expoente queer no Brasil e no mundo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_0"},
+  {id:20043,colId:25,colunistaNome:"Arthur Monteiro",titulo:"Dez anos da MPB mais queer que nunca: linha temporal 2016-2026",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_1"},
+  {id:20044,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O preço de ser LGBT na cultura pop dos anos 80",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-09",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_2"},
+  {id:20045,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"Quem tem medo de gênero nas escolas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_0"},
+  {id:20046,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A nova pornografia política: deepfakes sexuais como arma",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_1"},
+  {id:20047,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A bancada do pânico moral: quando proteger crianças vira desculpa para apagar diversidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_2"},
+  {id:20048,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"SEXO É SÓ TEATRAL: sobre minha redescoberta com a prática sexual",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_0"},
+  {id:20049,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"XUXA E A INSERÇÃO QUEER NA TV",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_1"},
+  {id:20050,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"GRAFISMO DE MULHERES CIS E TRANS: arte e expressão no interior de Pernambuco",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-30",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_2"},
+  {id:20051,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Hannah de Girls e a relação com o corpo enquanto pessoa gorda",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-16",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_0"},
+  {id:20052,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Paralelos entre cultura pop e experiências pessoais LGBTQ+",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-16",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_1"},
+  {id:20053,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"A escrita como necessidade: quando o outro me reconhece no texto",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-30",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_2"},
+  {id:20054,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Masturbação: tabus e revelações",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_0"},
+  {id:20055,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Banheiros masculinos como espaço de sociabilidade e repressão",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_1"},
+  {id:20056,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Cultura tecno e os corpos que a habitam",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_2"},
+  {id:20057,colId:34,colunistaNome:"Isabela",titulo:"Direitos reprodutivos: pautas para corpos que geram",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_0"},
+  {id:20058,colId:34,colunistaNome:"Isabela",titulo:"Gênero e identidade étnica: a emancipação das mulheres árabes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_1"},
+  {id:20059,colId:34,colunistaNome:"Isabela",titulo:"Cultura da pista de dança (ballroom, vogue) e histórias de resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_2"},
+  {id:20060,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Espelhos Distorcidos: deepfakes pornôs contra mulheres na política",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-23",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_0"},
+  {id:20061,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Do romance de banca ao áudio por assinatura: erotismo pensado para mulheres",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-23",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_1"},
+  {id:20062,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Milo J e ancestralidade como disputa por pertencimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_2"},
+  {id:20063,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A mulher cis e a masturbação: tabu e normalidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_0"},
+  {id:20064,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"O trabalho sexual na contemporaneidade: neoliberalismo e OnlyFans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_1"},
+  {id:20065,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A teoria queer através de Gayle Rubin",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_2"},
+  {id:20066,colId:38,colunistaNome:"Jean",titulo:"Abuso sexual de meninos gays: o silêncio que adoece",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_0"},
+  {id:20067,colId:38,colunistaNome:"Jean",titulo:"Pornografia na construção do imaginário erótico gay",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_1"},
+  {id:20068,colId:38,colunistaNome:"Jean",titulo:"Como o belohorizontino flerta fora dos aplicativos",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-06",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_2"},
+  {id:20069,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A construção histórica da monogamia como modelo dominante",editoria:"História e Memória Política",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-06",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_0"},
+  {id:20070,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A ausência de referências LGBTQIAPN+ durante a infância",editoria:"História e Memória Política",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_1"},
+  {id:20071,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"Por que os homens ocupam posição de sujeito nas narrativas sobre sexo",editoria:"História e Memória Política",dataPublicacao:"2026-10-02",dataEntrega:"2026-09-29",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_2"},
+  {id:20072,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A comunidade queer é cronicamente online",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_0"},
+  {id:20073,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"O que o BDSM pode ensinar sobre comunicação e consentimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_1"},
+  {id:20074,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A linguagem queer secreta: códigos e encontros antes da era digital",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-02",dataEntrega:"2026-09-29",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_2"},
+  {id:20075,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"A ausência de lésbicas masc na dramaturgia brasileira",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_0"},
+  {id:20076,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Novas possibilidades imagéticas da experiência lésbica",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-13",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_1"},
+  {id:20077,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Qual a conceptualização discursiva da mulher sáfica nas redes sociais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-05",dataEntrega:"2026-10-02",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_2"},
+  {id:20078,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Masculinidades trans em pauta: Como faz a barba",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-13",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_0"},
+  {id:20079,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Existe amor para esse corpo trans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-18",dataEntrega:"2026-09-15",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_1"},
+  {id:20080,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Pode um homem trans ser jogador de futebol",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-05",dataEntrega:"2026-10-02",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_2"},
+  {id:20081,colId:53,colunistaNome:"Débora Adones",titulo:"A vivência LGBTQ+ nas cidades de pequeno porte do Brasil",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-18",dataEntrega:"2026-09-15",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_0"},
+  {id:20082,colId:53,colunistaNome:"Débora Adones",titulo:"Como personagens explosivos fazem alusão à vivência queer no cinema",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_1"},
+  {id:20083,colId:53,colunistaNome:"Débora Adones",titulo:"A democratização da educação sexual LGBTQ+ pela internet",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-07",dataEntrega:"2026-10-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_2"},
+  {id:20084,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo em locais públicos como cartografia do desejo nas cidades",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_0"},
+  {id:20085,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo e o ambiente da política brasileira",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-20",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_1"},
+  {id:20086,colId:56,colunistaNome:"Lucas Brito",titulo:"Quanto mais sexo, menos sexo: jovens e a recessão sexual",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-07",dataEntrega:"2026-10-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_2"}
+];
