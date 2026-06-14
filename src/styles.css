@@ -1,28 +1,28 @@
-/* 1. Importação das Fontes */
+/* 1. Importação das Fontes Ajustada */
 @font-face {
   font-family: "Gibson";
-  src: url("Fonts/gibson-regular.otf") format("opentype");
+  src: url("./Fonts/gibson-regular.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: "Gibson";
-  src: url("Fonts/gibson-bold.otf") format("opentype");
+  src: url("./Fonts/gibson-bold.otf") format("opentype");
   font-weight: 700;
   font-style: normal;
 }
 
 @font-face {
   font-family: "Oswald";
-  src: url("Fonts/Oswald-Regular.ttf") format("truetype");
+  src: url("./Fonts/Oswald-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: "Oswald";
-  src: url("Fonts/Oswald-Bold.ttf") format("truetype");
+  src: url("./Fonts/Oswald-Bold.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
 }
