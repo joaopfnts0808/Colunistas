@@ -1653,10 +1653,12 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead }) {
                   cursor: "pointer",
                 }}
               >
-                <Avatar
-                  sigla={COLUMNISTS.find((c) => c.id === t.colId)?.sigla || "?"}
-                  size={30}
-                />
+                {(()=>{
+                  const col=COLUMNISTS.find(c=>c.id===t.colId);
+                  const foto=(contraExtra[t.colId]||{}).foto;
+                  if(foto) return <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${C.accent}33`}}><img src={foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
+                  return <Avatar sigla={col?.sigla||"?"} size={30}/>;
+                })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -1860,6 +1862,9 @@ function IdeiaTab({
   gsTarefas,
   ideiasExtra,
   addIdeia,
+  contraExtra={},
+  texts=[],
+  updateTextStatus,
 }) {
   const [filter, setFilter] = useState("todas");
   const [selected, setSelected] = useState([]);
@@ -1869,6 +1874,53 @@ function IdeiaTab({
   const [novaEd, setNovaEd] = useState("");
   const [novaCol, setNovaCol] = useState("");
   const [novaEsboco, setNovaEsboco] = useState("");
+  const [editIdeia, setEditIdeia] = useState(null); // modal de edição de tarefa
+  const [editIdeiaData, setEditIdeiaData] = useState({});
+
+  const openEditIdeia = (idea) => {
+    // Busca o texto correspondente a esta tarefa
+    const texto = texts.find(t => t.titulo === idea.pauta && t.colId === idea.colId);
+    setEditIdeiaData({
+      titulo: idea.pauta,
+      editoria: idea.editoria,
+      dataEntrega: texto?.dataEntrega || texto?.prazo || "",
+      dataPublicacao: texto?.dataPublicacao || "",
+      briefing: texto?.briefing || idea.esboco || "",
+      link: texto?.link || "",
+      status: texto?.status || "Pendente",
+      _textoId: texto?.id || null,
+    });
+    setEditIdeia(idea);
+  };
+
+  const saveEditIdeia = () => {
+    if(editIdeiaData._textoId) {
+      updateTextStatus(editIdeiaData._textoId, editIdeiaData.status, {
+        titulo: editIdeiaData.titulo,
+        editoria: editIdeiaData.editoria,
+        dataEntrega: editIdeiaData.dataEntrega,
+        dataPublicacao: editIdeiaData.dataPublicacao,
+        briefing: editIdeiaData.briefing,
+        link: editIdeiaData.link,
+      });
+    } else {
+      // Cria o texto se ainda não existe
+      addText({
+        colId: editIdeia.colId,
+        colunistaNome: editIdeia.nome,
+        titulo: editIdeiaData.titulo,
+        editoria: editIdeiaData.editoria,
+        dataEntrega: editIdeiaData.dataEntrega,
+        dataPublicacao: editIdeiaData.dataPublicacao,
+        briefing: editIdeiaData.briefing,
+        link: editIdeiaData.link,
+        obs: "Do banco de ideias",
+        status: editIdeiaData.status || "Pendente",
+      });
+      setIdeaStatus(editIdeia.key, "em tarefa");
+    }
+    setEditIdeia(null);
+  };
 
   const allIdeas = COLUMNISTS.flatMap((col) =>
     col.pautas.map((p, i) => {
@@ -2042,9 +2094,13 @@ function IdeiaTab({
               marginBottom: 12,
             }}
           >
-            <Avatar sigla={col.sigla} size={32} />
+            {(()=>{
+              const foto=(contraExtra[col.id]||{}).foto;
+              if(foto) return <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${C.accent}44`}}><img src={foto} alt={col.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
+              return <Avatar sigla={col.sigla} size={40}/>;
+            })()}
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFamily: C.fontDestaque }}>
                 {col.nome}
               </div>
               <div style={{ fontSize: 11, color: C.dim }}>
@@ -2076,13 +2132,13 @@ function IdeiaTab({
               return (
                 <div
                   key={idea.key}
-                  onClick={() => selectMode && toggleSel(idea.key)}
+                  onClick={() => selectMode ? toggleSel(idea.key) : openEditIdeia(idea)}
                   style={{
                     background: isSel ? C.acBg : C.s1,
                     border: `1px solid ${isSel ? C.accent + "66" : C.faint}`,
                     borderRadius: 6,
                     padding: 14,
-                    cursor: selectMode ? "pointer" : "default",
+                    cursor: "pointer",
                     transition: "all 0.15s",
                     display: "flex",
                     flexDirection: "column",
@@ -2274,6 +2330,7 @@ function ContrapartidasTab({
     setEditData({
       foto: ex.foto || "",
       descricao: ex.descricao || "",
+      bioLink: ex.bioLink || "",
       obs: ex.obs || "",
     });
     setEditCol(col);
@@ -2569,15 +2626,12 @@ function ContrapartidasTab({
             <Btn
               variant="primary"
               onClick={() => {
-                setContraExtra((prev) => {
-                  const n = { ...prev, [editCol.id]: editData };
-                  save("sx2_contraExtra", n);
-                  return n;
-                });
+                // Pass plain value — App's setContraExtra handles saving
+                setContraExtra(prev => ({ ...prev, [editCol.id]: { ...editData } }));
                 setEditCol(null);
               }}
             >
-              Salvar
+              Salvar perfil
             </Btn>
           </div>
         </Modal>
@@ -4241,6 +4295,9 @@ export default function App() {
               gsTarefas={gsTarefas}
               ideiasExtra={ideiasExtra}
               addIdeia={addIdeia}
+              contraExtra={contraExtra}
+              texts={texts}
+              updateTextStatus={updateTextStatus}
             />
           )}
           {tab === "contrapartidas" && (
