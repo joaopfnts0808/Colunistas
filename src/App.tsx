@@ -72,7 +72,7 @@ const EDITORIAS = [
 
 // Mapeamento das editorias para as cores do arco-íris da marca
 const ED_COLORS = {
-  "Cultura Queer e Trans": "#f575b",
+  "Cultura Queer e Trans": "#ff575b",
   "História e Memória Política": "#fff700",
   "Práticas Sexuais, Corpo e Relacionamentos": "#6d20ff",
   "Diversidade, Equidade e Inclusão": "#00ff6e",
@@ -843,7 +843,7 @@ function Input({ value, onChange, placeholder, type = "text", style = {} }) {
         color: C.text,
         padding: "9px 12px",
         borderRadius: 4,
-        fontSize: 13,
+        fontSize: 14,
         boxSizing: "border-box",
         outline: "none",
         fontFamily: "inherit",
@@ -865,7 +865,7 @@ function Select({ value, onChange, options, placeholder, style = {} }) {
         color: value ? C.text : C.dim,
         padding: "9px 12px",
         borderRadius: 4,
-        fontSize: 13,
+        fontSize: 14,
         boxSizing: "border-box",
         outline: "none",
         fontFamily: "inherit",
@@ -1276,15 +1276,20 @@ function NavBar({
   const gestorTabs = [
     { id: "painel", label: "Painel" },
     { id: "ideias", label: "Banco de Ideias" },
+    { id: "briefing", label: "Briefing" },
     { id: "contrapartidas", label: "Contrapartidas" },
     { id: "calendario", label: "Calendário" },
     { id: "colunistas", label: "Colunistas" },
+    { id: "leituras", label: "Leituras" },
+    { id: "trilha", label: "Trilha" },
   ];
   const coliTabs = [
     { id: "enviar", label: "Enviar Texto" },
     { id: "meus", label: "Meus Textos" },
     { id: "calendario", label: "Meu Calendário" },
     { id: "contrapartidas", label: "Contrapartidas" },
+    { id: "leituras", label: "Leituras" },
+    { id: "trilha", label: "Trilha" },
   ];
   const tabs = user.role === "gestor" ? gestorTabs : coliTabs;
   return (
@@ -1863,6 +1868,7 @@ function IdeiaTab({
   const [novaPauta, setNovaPauta] = useState("");
   const [novaEd, setNovaEd] = useState("");
   const [novaCol, setNovaCol] = useState("");
+  const [novaEsboco, setNovaEsboco] = useState("");
 
   const allIdeas = COLUMNISTS.flatMap((col) =>
     col.pautas.map((p, i) => {
@@ -2204,75 +2210,33 @@ function IdeiaTab({
 
       {/* Sugestão modal */}
       {sugestaoModal && (
-        <Modal
-          title="Adicionar Sugestão de Pauta"
-          onClose={() => setSugestaoModal(false)}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <Label>Colunista</Label>
-              <Select
-                value={novaCol}
-                onChange={setNovaCol}
-                placeholder="— selecione —"
-                options={COLUMNISTS.map((c) => ({
-                  value: String(c.id),
-                  label: c.nome,
-                }))}
-              />
+        <Modal title="✦ Sugerir Nova Pauta" onClose={()=>setSugestaoModal(false)} width={580}>
+          <div style={{background:C.acBg,border:`1px solid ${C.accent}33`,borderRadius:6,padding:"12px 14px",marginBottom:16}}>
+            <div style={{fontSize:12,color:C.accent,fontWeight:700,marginBottom:2}}>Destaque para uma nova ideia</div>
+            <div style={{fontSize:12,color:C.muted}}>A pauta vai para o banco com status "sugestão", visível para o gestor.</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div><Label>Colunista</Label>
+              <Select value={novaCol} onChange={setNovaCol} placeholder="— selecione —" options={COLUMNISTS.map(c=>({value:String(c.id),label:c.nome}))}/>
             </div>
-            <div>
-              <Label>Editoria</Label>
-              <Select
-                value={novaEd}
-                onChange={setNovaEd}
-                placeholder="— selecione —"
-                options={EDITORIAS.map((e) => ({ value: e, label: e }))}
-              />
+            <div><Label>Editoria</Label>
+              <Select value={novaEd} onChange={setNovaEd} placeholder="— selecione —"
+                options={novaCol?(COLUMNISTS.find(c=>c.id===Number(novaCol))?.editorias||EDITORIAS).map(e=>({value:e,label:e})):EDITORIAS.map(e=>({value:e,label:e}))}/>
             </div>
-            <div>
-              <Label>Pauta sugerida</Label>
-              <textarea
-                value={novaPauta}
-                onChange={(e) => setNovaPauta(e.target.value)}
-                placeholder="Descreva a pauta..."
-                style={{
-                  width: "100%",
-                  background: C.s2,
-                  border: `1px solid ${C.b}`,
-                  color: C.text,
-                  padding: "9px 12px",
-                  borderRadius: 4,
-                  fontSize: 13,
-                  minHeight: 80,
-                  fontFamily: "inherit",
-                  resize: "vertical",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
+            <div><Label>Título / Pauta sugerida *</Label>
+              <Input value={novaPauta} onChange={setNovaPauta} placeholder="Ex: Por que o gay preto é pra sexo e o gay branco é pra namoro?"/>
             </div>
-            <Btn
-              variant="primary"
-              onClick={() => {
-                if (!novaCol || !novaPauta) return;
-                const col = COLUMNISTS.find((c) => c.id === Number(novaCol));
-                addIdeia({
-                  colId: Number(novaCol),
-                  nome: col?.nome || "",
-                  sigla: col?.sigla || "?",
-                  editoria: novaEd || col?.editorias[0] || "",
-                  pauta: novaPauta,
-                });
-                setNovaPauta("");
-                setNovaCol("");
-                setNovaEd("");
-                setSugestaoModal(false);
-              }}
-              disabled={!novaCol || !novaPauta}
-            >
-              Adicionar Pauta
-            </Btn>
+            <div><Label>Esboço / Descrição da pauta</Label>
+              <textarea value={novaEsboco} onChange={e=>setNovaEsboco(e.target.value)}
+                placeholder="Ângulo, argumento principal, abordagem proposta..."
+                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <Btn variant="primary" disabled={!novaCol||!novaPauta} onClick={()=>{
+              if(!novaCol||!novaPauta)return;
+              const col=COLUMNISTS.find(c=>c.id===Number(novaCol));
+              addIdeia({colId:Number(novaCol),nome:col?.nome||"",sigla:col?.sigla||"?",editoria:novaEd||col?.editorias[0]||"",pauta:novaPauta,esboco:novaEsboco});
+              setNovaPauta("");setNovaCol("");setNovaEd("");setNovaEsboco("");setSugestaoModal(false);
+            }}>Adicionar ao Banco de Ideias</Btn>
           </div>
         </Modal>
       )}
@@ -2985,8 +2949,22 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
 }
 
 // ── GESTOR: Colunistas ──────────────────────────────────────────────────
-function ColunistasTab({ texts, contraExtra }) {
+function ColunistasTab({ texts, contraExtra, setContraExtra }) {
   const [search, setSearch] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [editData, setEditData] = useState({foto:"",descricao:"",bioLink:"",obs:""});
+
+  const openProfile = (col) => {
+    const ex = contraExtra[col.id] || {};
+    setEditData({foto:ex.foto||"",descricao:ex.descricao||"",bioLink:ex.bioLink||"",obs:ex.obs||""});
+    setProfile(col);
+  };
+
+  const saveProfile = () => {
+    setContraExtra(prev => ({...prev,[profile.id]:editData}));
+    setProfile(null);
+  };
+
   const filtered = COLUMNISTS.filter(
     (c) =>
       !search ||
@@ -2996,174 +2974,118 @@ function ColunistasTab({ texts, contraExtra }) {
   return (
     <div style={{ padding: 20 }}>
       <div style={{ marginBottom: 16 }}>
-        <Input
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar colunista ou instituição..."
-        />
+        <Input value={search} onChange={setSearch} placeholder="Buscar colunista ou instituição..."/>
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
-          gap: 12,
-        }}
-      >
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {filtered.map((col) => {
           const myTexts = texts.filter((t) => t.colId === col.id);
           const pub = myTexts.filter((t) => t.status === "Publicado").length;
           const ex = contraExtra[col.id] || {};
           return (
-            <div
-              key={col.id}
-              style={{
-                background: C.s1,
-                border: `1px solid ${C.faint}`,
-                borderRadius: 8,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  padding: "16px 14px 12px",
-                  alignItems: "center",
-                }}
-              >
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: "50%",
-                    background: C.s2,
-                    border: `1px solid ${C.accent}33`,
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+            <div key={col.id} onClick={()=>openProfile(col)}
+              style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:8,overflow:"hidden",cursor:"pointer",transition:"border-color 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent+"44"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=C.faint}>
+              <div style={{display:"flex",gap:12,padding:"16px 14px 12px",alignItems:"center"}}>
+                <div style={{width:56,height:56,borderRadius:"50%",background:C.s2,border:`1px solid ${C.accent}33`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                   {ex.foto ? (
-                    <img
-                      src={ex.foto}
-                      alt={col.nome}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                      onError={(e) => (e.target.style.display = "none")}
-                    />
+                    <img src={ex.foto} alt={col.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={(e)=>(e.target.style.display="none")}/>
                   ) : (
-                    <span
-                      style={{ fontSize: 16, fontWeight: 700, color: C.accent }}
-                    >
-                      {col.sigla}
-                    </span>
+                    <span style={{fontSize:16,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{col.sigla}</span>
                   )}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: C.text,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {col.nome}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-                    {col.pronomes}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: C.muted,
-                      marginTop: 1,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {col.curso}
-                  </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.nome}</div>
+                  <div style={{fontSize:11,color:C.dim,marginTop:2}}>{col.pronomes}</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.curso}</div>
                 </div>
               </div>
-              <div
-                style={{ display: "flex", borderTop: `1px solid ${C.faint}` }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    padding: "8px 0",
-                    textAlign: "center",
-                    borderRight: `1px solid ${C.faint}`,
-                  }}
-                >
-                  <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>
-                    {myTexts.length}
-                  </div>
-                  <div style={{ fontSize: 10, color: C.dim }}>envios</div>
+              <div style={{display:"flex",borderTop:`1px solid ${C.faint}`}}>
+                <div style={{flex:1,padding:"8px 0",textAlign:"center",borderRight:`1px solid ${C.faint}`}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.text,fontFamily:C.fontDestaque}}>{myTexts.length}</div>
+                  <div style={{fontSize:10,color:C.dim}}>envios</div>
                 </div>
-                <div style={{ flex: 1, padding: "8px 0", textAlign: "center" }}>
-                  <div
-                    style={{ fontSize: 16, fontWeight: 700, color: C.green }}
-                  >
-                    {pub}
-                  </div>
-                  <div style={{ fontSize: 10, color: C.dim }}>publicados</div>
+                <div style={{flex:1,padding:"8px 0",textAlign:"center"}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.green,fontFamily:C.fontDestaque}}>{pub}</div>
+                  <div style={{fontSize:10,color:C.dim}}>publicados</div>
                 </div>
               </div>
-              <div
-                style={{
-                  padding: "10px 14px",
-                  borderTop: `1px solid ${C.faint}`,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 4,
-                }}
-              >
-                {col.editorias.map((e, i) => {
-                  const ec = ED_COLORS[e] || C.muted;
-                  return (
-                    <span
-                      key={i}
-                      style={{
-                        fontSize: 9,
-                        color: ec,
-                        background: ec + "18",
-                        border: `1px solid ${ec}33`,
-                        padding: "2px 7px",
-                        borderRadius: 3,
-                      }}
-                    >
-                      {e.split(":")[0].split(",")[0]}
-                    </span>
-                  );
+              <div style={{padding:"10px 14px",borderTop:`1px solid ${C.faint}`,display:"flex",flexWrap:"wrap",gap:4}}>
+                {col.editorias.map((e,i)=>{
+                  const ec=ED_COLORS[e]||C.muted;
+                  return <span key={i} style={{fontSize:9,color:ec,background:ec+"18",border:`1px solid ${ec}33`,padding:"2px 7px",borderRadius:3}}>{e.split(":")[0].split(",")[0]}</span>;
                 })}
               </div>
-              {ex.descricao && (
-                <div
-                  style={{
-                    padding: "0 14px 12px",
-                    fontSize: 11,
-                    color: C.dim,
-                    fontStyle: "italic",
-                  }}
-                >
-                  {ex.descricao.slice(0, 100)}
-                  {ex.descricao.length > 100 ? "..." : ""}
-                </div>
-              )}
+              {ex.descricao&&<div style={{padding:"0 14px 12px",fontSize:11,color:C.dim,fontStyle:"italic"}}>{ex.descricao.slice(0,100)}{ex.descricao.length>100?"...":""}</div>}
             </div>
           );
         })}
       </div>
+
+      {/* Profile Modal */}
+      {profile && (
+        <Modal title={profile.nome} onClose={()=>setProfile(null)} width={640}>
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            {/* Photo + info */}
+            <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
+              <div style={{flexShrink:0}}>
+                <div style={{width:100,height:100,borderRadius:8,background:C.s2,border:`1px solid ${C.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8}}>
+                  {editData.foto
+                    ?<img src={editData.foto} alt={profile.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    :<span style={{fontSize:28,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{profile.sigla}</span>
+                  }
+                </div>
+                {editData.foto&&(
+                  <a href={editData.foto} download={`${profile.nome.replace(/ /g,"_")}.jpg`} target="_blank" rel="noreferrer"
+                    style={{fontSize:10,color:C.accent,display:"block",textAlign:"center",textDecoration:"none"}}>
+                    ⬇ Download foto
+                  </a>
+                )}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:18,fontWeight:700,fontFamily:C.fontDestaque,color:C.text,marginBottom:4}}>{profile.nome}</div>
+                <div style={{fontSize:12,color:C.dim,marginBottom:2}}>{profile.pronomes} · {profile.email}</div>
+                <div style={{fontSize:12,color:C.muted,marginBottom:8}}>{profile.curso}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                  {profile.editorias.map((e,i)=>{
+                    const ec=ED_COLORS[e]||C.muted;
+                    return <span key={i} style={{fontSize:9,color:ec,background:ec+"18",border:`1px solid ${ec}33`,padding:"2px 7px",borderRadius:3}}>{e.split(",")[0]}</span>;
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{height:1,background:C.faint}}/>
+
+            {/* Edit fields */}
+            <div><Label>URL da Foto (300×300)</Label>
+              <Input value={editData.foto} onChange={v=>setEditData(d=>({...d,foto:v}))} placeholder="https://..."/>
+            </div>
+            <div>
+              <Label>Descrição curta (até 100 caracteres)</Label>
+              <Input value={editData.descricao} onChange={v=>setEditData(d=>({...d,descricao:v.slice(0,100)}))} placeholder="Bio curta do colunista..."/>
+              <div style={{fontSize:10,color:C.dim,marginTop:4,textAlign:"right"}}>{(editData.descricao||"").length}/100</div>
+            </div>
+            <div>
+              <Label>Link de Bio (até 1000 caracteres)</Label>
+              <textarea value={editData.bioLink} onChange={e=>setEditData(d=>({...d,bioLink:e.target.value.slice(0,1000)}))}
+                placeholder="https://... ou texto de apresentação completa"
+                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+              <div style={{fontSize:10,color:C.dim,marginTop:4,textAlign:"right"}}>{(editData.bioLink||"").length}/1000</div>
+            </div>
+            <div>
+              <Label>Observações internas</Label>
+              <textarea value={editData.obs} onChange={e=>setEditData(d=>({...d,obs:e.target.value}))}
+                placeholder="Notas, acordos, avisos internos..."
+                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <Btn variant="primary" onClick={saveProfile}>Salvar perfil</Btn>
+              <Btn onClick={()=>setProfile(null)}>Cancelar</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -3719,6 +3641,266 @@ function MinhasContrapartidasTab({ contrapartidas }) {
   );
 }
 
+
+// ── Horários de publicação (Seg/Qua/Sex: 10h, 12h, 18h) ────────────────
+const HORARIOS_PUB = ["10:00","12:00","18:00"];
+const DIAS_PUB = [1,3,5]; // 1=Seg, 3=Qua, 5=Sex
+const DATA_INICIO_PUB = new Date("2026-06-22");
+
+function proximosSlots(n=6) {
+  const slots = [];
+  const d = new Date(DATA_INICIO_PUB);
+  while(slots.length < n) {
+    if(DIAS_PUB.includes(d.getDay())) {
+      HORARIOS_PUB.forEach(h => {
+        const label = `${d.toLocaleDateString("pt-BR")} às ${h}`;
+        const isoDate = d.toISOString().slice(0,10);
+        slots.push({label, isoDate, horario:h});
+      });
+    }
+    d.setDate(d.getDate()+1);
+    if(slots.length>=n) break;
+  }
+  return slots.slice(0,n);
+}
+
+function dataEntregaSugerida(isoDataPublicacao) {
+  if(!isoDataPublicacao) return "";
+  const d = new Date(isoDataPublicacao);
+  d.setDate(d.getDate()-3);
+  return d.toISOString().slice(0,10);
+}
+
+// ── GESTOR: Briefing ─────────────────────────────────────────────────────
+function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
+  const [colId, setColId] = useState("");
+  const [editoria, setEditoria] = useState("");
+  const [linkRef, setLinkRef] = useState("");
+  const [dataPublicacao, setDataPublicacao] = useState("");
+  const [dataEntrega, setDataEntregaB] = useState("");
+  const [obs, setObs] = useState("");
+  const [sent, setSent] = useState(false);
+  const slots = proximosSlots(18);
+
+  const handleDataPub = (v) => {
+    setDataPublicacao(v);
+    setDataEntregaB(dataEntregaSugerida(v));
+  };
+
+  const submit = () => {
+    if(!colId||!editoria) return;
+    const col = COLUMNISTS.find(c=>c.id===Number(colId));
+    addBriefing({colId:Number(colId),colunistaNome:col?.nome||"",editoria,linkRef,dataPublicacao,dataEntrega,obs,status:"Enviado"});
+    setColId("");setEditoria("");setLinkRef("");setDataPublicacao("");setDataEntregaB("");setObs("");
+    setSent(true);setTimeout(()=>setSent(false),3000);
+  };
+
+  return (
+    <div style={{padding:20,maxWidth:700}}>
+      <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:4}}>Enviar Briefing</div>
+      <div style={{fontSize:13,color:C.muted,marginBottom:20}}>Selecione colunista, editoria e data de publicação. A entrega sugerida é calculada automaticamente (3 dias antes).</div>
+
+      {sent&&<div style={{background:C.grBg,border:`1px solid ${C.green}44`,borderRadius:6,padding:"12px 16px",marginBottom:16,fontSize:13,color:C.green,fontWeight:600}}>✓ Briefing enviado!</div>}
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        <div><Label>Colunista *</Label>
+          <Select value={colId} onChange={setColId} placeholder="— selecione —" options={COLUMNISTS.map(c=>({value:String(c.id),label:c.nome}))}/>
+        </div>
+        <div><Label>Editoria *</Label>
+          <Select value={editoria} onChange={setEditoria} placeholder="— selecione —"
+            options={colId ? (COLUMNISTS.find(c=>c.id===Number(colId))?.editorias||EDITORIAS).map(e=>({value:e,label:e})) : EDITORIAS.map(e=>({value:e,label:e}))}/>
+        </div>
+        <div><Label>Data de Publicação</Label>
+          <Select value={dataPublicacao} onChange={handleDataPub} placeholder="— selecione slot —"
+            options={slots.map(s=>({value:s.isoDate,label:s.label}))}/>
+          <div style={{fontSize:10,color:C.dim,marginTop:4}}>Apenas Seg, Qua e Sex · 10h, 12h ou 18h</div>
+        </div>
+        <div><Label>Data de Entrega (automática)</Label>
+          <Input type="date" value={dataEntrega} onChange={setDataEntregaB} placeholder=""/>
+          <div style={{fontSize:10,color:C.dim,marginTop:4}}>3 dias antes da publicação</div>
+        </div>
+        <div style={{gridColumn:"1/-1"}}><Label>Link de Referência</Label>
+          <Input value={linkRef} onChange={setLinkRef} placeholder="https://... artigo, referência ou documento"/>
+        </div>
+        <div style={{gridColumn:"1/-1"}}><Label>Instruções / Observações</Label>
+          <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Diretrizes editoriais, tom, pontos obrigatórios..."
+            style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+      </div>
+      <Btn variant="primary" onClick={submit} disabled={!colId||!editoria}>Enviar Briefing</Btn>
+
+      {briefings.length>0&&(
+        <div style={{marginTop:28}}>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:12}}>Briefings enviados ({briefings.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {briefings.slice().reverse().map(b=>(
+              <div key={b.id} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{b.colunistaNome}</div>
+                    <div style={{fontSize:11,color:C.dim}}>{b.editoria}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    {b.dataPublicacao&&<div style={{fontSize:11,color:C.accent}}>Publ.: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
+                    {b.dataEntrega&&<div style={{fontSize:11,color:C.amber}}>Entrega: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
+                  </div>
+                </div>
+                {b.linkRef&&<a href={b.linkRef} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.purple,display:"block",marginBottom:4,wordBreak:"break-all"}}>{b.linkRef}</a>}
+                {b.obs&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic"}}>{b.obs}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Leituras Essenciais (gestor edita, colunista lê) ─────────────────────
+function LeiturasTab({ leituras, setLeituras, role }) {
+  const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
+  const [adding, setAdding] = useState(false);
+
+  const addLeitura = () => {
+    if(!form.titulo||!form.link) return;
+    setLeituras(prev=>[...prev,{...form,id:Date.now()}]);
+    setForm({titulo:"",link:"",editoria:"",descricao:""});setAdding(false);
+  };
+
+  return (
+    <div style={{padding:20,maxWidth:760}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Leituras Essenciais</div>
+          <div style={{fontSize:13,color:C.muted}}>Material obrigatório para certificação dos colunistas.</div>
+        </div>
+        {role==="gestor"&&<Btn variant="primary" small onClick={()=>setAdding(true)}>+ Adicionar</Btn>}
+      </div>
+
+      {leituras.length===0
+        ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhuma leitura cadastrada ainda.</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {leituras.map((l,idx)=>{
+            const ec=ED_COLORS[l.editoria]||C.muted;
+            return(
+              <div key={l.id||idx} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start"}}>
+                <div style={{flex:1}}>
+                  {l.editoria&&<div style={{fontSize:10,color:ec,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l.editoria}</div>}
+                  <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{l.titulo}</div>
+                  {l.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:6}}>{l.descricao}</div>}
+                  <a href={l.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>{l.link}</a>
+                </div>
+                {role==="gestor"&&(
+                  <button onClick={()=>setLeituras(prev=>prev.filter((_,i)=>i!==idx))}
+                    style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      {adding&&(
+        <Modal title="Adicionar Leitura" onClose={()=>setAdding(false)}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div><Label>Título *</Label><Input value={form.titulo} onChange={v=>setForm(f=>({...f,titulo:v}))} placeholder="Nome da leitura"/></div>
+            <div><Label>Link *</Label><Input value={form.link} onChange={v=>setForm(f=>({...f,link:v}))} placeholder="https://..."/></div>
+            <div><Label>Editoria (opcional)</Label>
+              <Select value={form.editoria} onChange={v=>setForm(f=>({...f,editoria:v}))} placeholder="— todas as editorias —" options={EDITORIAS.map(e=>({value:e,label:e}))}/>
+            </div>
+            <div><Label>Descrição</Label><Input value={form.descricao} onChange={v=>setForm(f=>({...f,descricao:v}))} placeholder="Breve descrição do material"/></div>
+            <Btn variant="primary" onClick={addLeitura} disabled={!form.titulo||!form.link}>Salvar</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── Trilha de Aprendizado (PDFs por editoria) ─────────────────────────────
+function TrilhaTab({ trilha, setTrilha, role, colunista }) {
+  const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
+  const [adding, setAdding] = useState(false);
+
+  // Colunista só vê as editorias dele
+  const editoriasFiltro = role==="colunista" && colunista ? colunista.editorias : EDITORIAS;
+  const filtered = trilha.filter(t=>!t.editoria||editoriasFiltro.includes(t.editoria));
+
+  const addItem = () => {
+    if(!form.titulo||!form.link) return;
+    setTrilha(prev=>[...prev,{...form,id:Date.now()}]);
+    setForm({titulo:"",link:"",editoria:"",descricao:""});setAdding(false);
+  };
+
+  const byEditoria = editoriasFiltro.map(ed=>({
+    ed,
+    items: filtered.filter(t=>t.editoria===ed)
+  })).filter(g=>g.items.length>0||(role==="gestor"));
+
+  return (
+    <div style={{padding:20,maxWidth:760}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Trilha de Aprendizado</div>
+          <div style={{fontSize:13,color:C.muted}}>{role==="colunista"?"Material da sua trilha de formação.":"PDFs e links de formação por editoria."}</div>
+        </div>
+        {role==="gestor"&&<Btn variant="primary" small onClick={()=>setAdding(true)}>+ Adicionar</Btn>}
+      </div>
+
+      {filtered.length===0
+        ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhum material cadastrado.</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {EDITORIAS.map(ed=>{
+            const items = filtered.filter(t=>t.editoria===ed);
+            if(items.length===0) return null;
+            const ec=ED_COLORS[ed]||C.muted;
+            return(
+              <div key={ed}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <div style={{width:4,height:16,background:ec,borderRadius:2}}/>
+                  <div style={{fontSize:13,fontWeight:700,color:ec}}>{ed}</div>
+                  <span style={{fontSize:11,color:C.dim}}>({items.length})</span>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,paddingLeft:12}}>
+                  {items.map((item,idx)=>(
+                    <div key={item.id||idx} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:3}}>{item.titulo}</div>
+                        {item.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:4}}>{item.descricao}</div>}
+                        <a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>
+                          {item.link.includes("pdf")?"📄 ":""}{item.link}
+                        </a>
+                      </div>
+                      {role==="gestor"&&(
+                        <button onClick={()=>setTrilha(prev=>prev.filter(t=>t.id!==item.id))}
+                          style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      {adding&&(
+        <Modal title="Adicionar Material" onClose={()=>setAdding(false)}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div><Label>Editoria *</Label>
+              <Select value={form.editoria} onChange={v=>setForm(f=>({...f,editoria:v}))} placeholder="— selecione —" options={EDITORIAS.map(e=>({value:e,label:e}))}/>
+            </div>
+            <div><Label>Título *</Label><Input value={form.titulo} onChange={v=>setForm(f=>({...f,titulo:v}))} placeholder="Nome do material"/></div>
+            <div><Label>Link ou URL do PDF *</Label><Input value={form.link} onChange={v=>setForm(f=>({...f,link:v}))} placeholder="https://... (PDF, artigo, vídeo)"/></div>
+            <div><Label>Descrição</Label><Input value={form.descricao} onChange={v=>setForm(f=>({...f,descricao:v}))} placeholder="Breve descrição"/></div>
+            <Btn variant="primary" onClick={addItem} disabled={!form.titulo||!form.link||!form.editoria}>Salvar</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ── Main App ─────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -3745,6 +3927,9 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [gsStatus, setGsStatus] = useState("conectando");
   const [gsTarefas, setGsTarefas] = useState([]);
+  const [leituras, setLeiturasState] = useState([]);
+  const [trilha, setTrilhaState] = useState([]);
+  const [briefings, setBriefingsState] = useState([]);
 
   useEffect(() => {
     let isFetching = false;
@@ -3767,6 +3952,9 @@ export default function App() {
           if (gs.sx2_ideiasExtra) setIdeiasExtraState(gs.sx2_ideiasExtra);
           if (gs.sx2_passwords) setPasswords(gs.sx2_passwords);
           if (gs.tarefas_planilha) setGsTarefas(gs.tarefas_planilha);
+          if (gs.sx2_leituras) setLeiturasState(gs.sx2_leituras);
+          if (gs.sx2_trilha) setTrilhaState(gs.sx2_trilha);
+          if (gs.sx2_briefings) setBriefingsState(gs.sx2_briefings);
           setGsStatus("conectado");
         } else {
           setGsStatus("offline");
@@ -3778,7 +3966,7 @@ export default function App() {
     };
 
     async function init() {
-      const [t, co, ce, cal, cp, n, i, ie, p] = await Promise.all([
+      const [t, co, ce, cal, cp, n, i, ie, p, l, tr, br] = await Promise.all([
         load("sx2_texts", []),
         load("sx2_contra", {}),
         load("sx2_contraExtra", {}),
@@ -3788,9 +3976,19 @@ export default function App() {
         load("sx2_ideas", {}),
         load("sx2_ideiasExtra", []),
         load("sx2_passwords", {}),
+        load("sx2_leituras", []),
+        load("sx2_trilha", []),
+        load("sx2_briefings", []),
       ]);
 
-      setTexts(t);
+      // Seed histórico de publicações: Matheus e Moon Kenzo já têm 1 publicado
+      const seedTexts = t.length === 0 ? [
+        {id:1,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataEntrega:"2026-06-20",dataPublicacao:"2026-06-22",status:"Publicado",dataSubmissao:"20/06/2026",link:"",obs:"Texto inaugural"},
+        {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-23",dataPublicacao:"2026-06-25",status:"Publicado",dataSubmissao:"23/06/2026",link:"",obs:"Texto inaugural"},
+      ] : t;
+
+      setTexts(seedTexts);
+      if(t.length===0) save("sx2_texts", seedTexts);
       setContrapartidas(co);
       setContraExtraState(ce);
       setCalendar(cal);
@@ -3799,6 +3997,9 @@ export default function App() {
       setIdeasStatusState(i);
       setIdeiasExtraState(ie);
       setPasswords(p);
+      setLeiturasState(l);
+      setTrilhaState(tr);
+      setBriefingsState(br);
       setLoaded(true);
 
       setTimeout(syncWithGoogle, 1500);
@@ -3919,6 +4120,30 @@ export default function App() {
     save("sx2_passwords", p);
   }, []);
 
+  const setLeituras = useCallback((fn) => {
+    setLeiturasState((prev) => {
+      const n = typeof fn === "function" ? fn(prev) : fn;
+      save("sx2_leituras", n);
+      return n;
+    });
+  }, []);
+
+  const setTrilha = useCallback((fn) => {
+    setTrilhaState((prev) => {
+      const n = typeof fn === "function" ? fn(prev) : fn;
+      save("sx2_trilha", n);
+      return n;
+    });
+  }, []);
+
+  const addBriefing = useCallback((b) => {
+    setBriefingsState((prev) => {
+      const n = [...prev, { ...b, id: Date.now() }];
+      save("sx2_briefings", n);
+      return n;
+    });
+  }, []);
+
   const handleLogin = useCallback((u) => {
     setUser(u);
     const startTab = u.role === "gestor" ? "painel" : "enviar";
@@ -4022,7 +4247,16 @@ export default function App() {
             />
           )}
           {tab === "colunistas" && (
-            <ColunistasTab texts={texts} contraExtra={contraExtra} />
+            <ColunistasTab texts={texts} contraExtra={contraExtra} setContraExtra={setContraExtra}/>
+          )}
+          {tab === "briefing" && (
+            <BriefingTab briefings={briefings} addBriefing={addBriefing} texts={texts} updateTextStatus={updateTextStatus}/>
+          )}
+          {tab === "leituras" && (
+            <LeiturasTab leituras={leituras} setLeituras={setLeituras} role="gestor"/>
+          )}
+          {tab === "trilha" && (
+            <TrilhaTab trilha={trilha} setTrilha={setTrilha} role="gestor"/>
           )}
         </>
       ) : (
@@ -4049,6 +4283,12 @@ export default function App() {
             <MinhasContrapartidasTab
               contrapartidas={contrapartidas[user.colId] || {}}
             />
+          )}
+          {tab === "leituras" && (
+            <LeiturasTab leituras={leituras} role="colunista"/>
+          )}
+          {tab === "trilha" && (
+            <TrilhaTab trilha={trilha} role="colunista" colunista={colunista}/>
           )}
         </>
       )}
