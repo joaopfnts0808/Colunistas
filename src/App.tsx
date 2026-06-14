@@ -2613,8 +2613,9 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
     (calendar[c.id] || []).includes(cur.mi)
   );
   const meTexts = texts.filter((t) => {
-    if (!t.prazo && !t.dataEntrega) return false;
-    const d = new Date(t.prazo || t.dataEntrega);
+    const ds = t.dataPublicacao || t.prazo || t.dataEntrega;
+    if (!ds) return false;
+    const d = new Date(ds);
     return !isNaN(d) && d.getMonth() === cur.mi && d.getFullYear() === cur.yr;
   });
   const mPautas = calPautas[mKey] || [];
@@ -2822,19 +2823,16 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
                     padding: "10px 12px",
                   }}
                 >
-                  <div
-                    style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}
-                  >
-                    {t.titulo}
-                  </div>
-                  <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
-                  >
-                    <span style={{ fontSize: 11, color: C.dim }}>
-                      {t.colunistaNome}
-                    </span>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t.titulo}</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap:"wrap", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: C.dim }}>{t.colunistaNome}</span>
                     <StatusBadge status={t.status} />
                   </div>
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                    {t.dataEntrega&&<span style={{fontSize:10,color:C.amber}}>📝 Entrega: {new Date(t.dataEntrega).toLocaleDateString("pt-BR")}</span>}
+                    {t.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🚀 Publicação: {new Date(t.dataPublicacao).toLocaleDateString("pt-BR")}</span>}
+                  </div>
+                  {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.purple,display:"block",marginTop:4,wordBreak:"break-all"}}>{t.link}</a>}
                 </div>
               ))}
             </div>
@@ -2949,7 +2947,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
 }
 
 // ── GESTOR: Colunistas ──────────────────────────────────────────────────
-function ColunistasTab({ texts, contraExtra, setContraExtra }) {
+function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
   const [search, setSearch] = useState("");
   const [profile, setProfile] = useState(null);
   const [editData, setEditData] = useState({foto:"",descricao:"",bioLink:"",obs:""});
@@ -3017,6 +3015,30 @@ function ColunistasTab({ texts, contraExtra, setContraExtra }) {
                 })}
               </div>
               {ex.descricao&&<div style={{padding:"0 14px 12px",fontSize:11,color:C.dim,fontStyle:"italic"}}>{ex.descricao.slice(0,100)}{ex.descricao.length>100?"...":""}</div>}
+              {/* Demandas ativas */}
+              {(()=>{
+                const pendentes=myTexts.filter(t=>t.status!=="Publicado"&&t.status!=="Rejeitado");
+                const bfs=briefings.filter(b=>b.colId===col.id&&b.status!=="Concluído");
+                if(pendentes.length===0&&bfs.length===0) return null;
+                return(
+                  <div style={{padding:"8px 14px 12px",borderTop:`1px solid ${C.faint}`}}>
+                    <div style={{fontSize:10,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Demandas ativas</div>
+                    {bfs.map((b,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <div style={{fontSize:11,color:C.purple,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📋 {b.editoria}</div>
+                        {b.dataPublicacao&&<div style={{fontSize:10,color:C.accent,flexShrink:0,marginLeft:6}}>Pub: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
+                        {b.dataEntrega&&<div style={{fontSize:10,color:C.amber,flexShrink:0,marginLeft:6}}>Ent: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
+                      </div>
+                    ))}
+                    {pendentes.map((t,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <div style={{fontSize:11,color:C.amber,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>✎ {t.titulo}</div>
+                        <div style={{fontSize:10,color:STATUS_CFG[t.status]?.color||C.muted,flexShrink:0,marginLeft:6}}>{t.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -3983,8 +4005,8 @@ export default function App() {
 
       // Seed histórico de publicações: Matheus e Moon Kenzo já têm 1 publicado
       const seedTexts = t.length === 0 ? [
-        {id:1,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataEntrega:"2026-06-20",dataPublicacao:"2026-06-22",status:"Publicado",dataSubmissao:"20/06/2026",link:"",obs:"Texto inaugural"},
-        {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-23",dataPublicacao:"2026-06-25",status:"Publicado",dataSubmissao:"23/06/2026",link:"",obs:"Texto inaugural"},
+        {id:1,colId:6,colunistaNome:"Matheus Theodore",titulo:"Melly e o álbum que reacende a chama por dentro",editoria:"Cultura Queer e Trans",dataEntrega:"2026-06-19",dataPublicacao:"2026-06-22",status:"Publicado",dataSubmissao:"19/06/2026",link:"https://ssexbbox.com/melly-e-o-album-que-reacende-a-chama-por-dentro/",obs:"Texto inaugural"},
+        {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-22",dataPublicacao:"2026-06-25",status:"Publicado",dataSubmissao:"22/06/2026",link:"https://ssexbbox.com/turistas-da-submissao-voce-quer-o-fetiche-mas-nao-aguenta/",obs:"Texto inaugural"},
       ] : t;
 
       setTexts(seedTexts);
@@ -4247,7 +4269,7 @@ export default function App() {
             />
           )}
           {tab === "colunistas" && (
-            <ColunistasTab texts={texts} contraExtra={contraExtra} setContraExtra={setContraExtra}/>
+            <ColunistasTab texts={texts} contraExtra={contraExtra} setContraExtra={setContraExtra} briefings={briefings}/>
           )}
           {tab === "briefing" && (
             <BriefingTab briefings={briefings} addBriefing={addBriefing} texts={texts} updateTextStatus={updateTextStatus}/>
