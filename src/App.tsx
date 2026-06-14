@@ -2618,7 +2618,22 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
     const d = new Date(ds);
     return !isNaN(d) && d.getMonth() === cur.mi && d.getFullYear() === cur.yr;
   });
-  const mPautas = calPautas[mKey] || [];
+  // Combina calPautas manuais + textos com dataPublicacao neste mês
+  const calManuais = calPautas[mKey] || [];
+  const textsComPub = texts.filter(t => {
+    if (!t.dataPublicacao) return false;
+    const d = new Date(t.dataPublicacao);
+    return !isNaN(d) && d.getMonth() === cur.mi && d.getFullYear() === cur.yr;
+  });
+  const mPautas = [
+    ...calManuais,
+    ...textsComPub.map(t => ({
+      colId: t.colId, nome: t.colunistaNome, pauta: t.titulo,
+      editoria: t.editoria, horario: "", dataEntrega: t.dataEntrega || "",
+      dataPublicacao: t.dataPublicacao, status: t.status,
+      link: t.link || "", _fromText: true, _textId: t.id
+    }))
+  ];
 
   const addPauta = () => {
     if (!newColId || !newPauta) return;
@@ -2747,7 +2762,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               marginBottom: 10,
             }}
           >
-            <Label>Pautas agendadas ({mPautas.length})</Label>
+            <Label>Pautas agendadas ({mPautas.length}{textsComPub.length>0?` · ${textsComPub.length} com data de pub.`:""})</Label>
             <Btn small variant="primary" onClick={() => setAddPautaOpen(true)}>
               + Adicionar
             </Btn>
@@ -2759,47 +2774,24 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {mPautas.map((p, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: C.s1,
-                    border: `1px solid ${C.faint}`,
-                    borderRadius: 4,
-                    padding: "10px 12px",
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <Avatar
-                    sigla={
-                      COLUMNISTS.find((c) => c.id === p.colId)?.sigla || "?"
-                    }
-                    size={26}
-                  />
+                <div key={i} style={{background:p._fromText?C.s1:C.s2,border:`1px solid ${p._fromText?(STATUS_CFG[p.status]?.color||C.accent)+"33":C.faint}`,borderRadius:4,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <Avatar sigla={COLUMNISTS.find((c) => c.id === p.colId)?.sigla || "?"} size={26}/>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{ fontSize: 12, fontWeight: 600, color: C.text }}
-                    >
-                      {p.pauta}
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom:3 }}>{p.pauta}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                      <span style={{ fontSize: 11, color: C.dim }}>{p.nome}</span>
+                      {p.status&&<StatusBadge status={p.status}/>}
                     </div>
-                    <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-                      {p.nome}
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      {p.dataEntrega&&<span style={{fontSize:10,color:C.amber}}>📝 Entrega: {new Date(p.dataEntrega).toLocaleDateString("pt-BR")}</span>}
+                      {p.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🚀 Pub: {new Date(p.dataPublicacao).toLocaleDateString("pt-BR")}</span>}
+                      {p.horario&&!p.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🕐 {cur.fullLabel} às {p.horario}</span>}
                     </div>
+                    {p.link&&<a href={p.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.purple,display:"block",marginTop:3,wordBreak:"break-all"}}>{p.link}</a>}
                   </div>
-                  <button
-                    onClick={() => removePauta(i)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: C.dim,
-                      cursor: "pointer",
-                      fontSize: 14,
-                      flexShrink: 0,
-                    }}
-                  >
-                    ×
-                  </button>
+                  {!p._fromText&&(
+                    <button onClick={() => removePauta(i)} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:14,flexShrink:0}}>×</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -4005,8 +3997,8 @@ export default function App() {
 
       // Seed histórico de publicações: Matheus e Moon Kenzo já têm 1 publicado
       const seedTexts = t.length === 0 ? [
-        {id:1,colId:6,colunistaNome:"Matheus Theodore",titulo:"Melly e o álbum que reacende a chama por dentro",editoria:"Cultura Queer e Trans",dataEntrega:"2026-06-19",dataPublicacao:"2026-06-22",status:"Publicado",dataSubmissao:"19/06/2026",link:"https://ssexbbox.com/melly-e-o-album-que-reacende-a-chama-por-dentro/",obs:"Texto inaugural"},
-        {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-22",dataPublicacao:"2026-06-25",status:"Publicado",dataSubmissao:"22/06/2026",link:"https://ssexbbox.com/turistas-da-submissao-voce-quer-o-fetiche-mas-nao-aguenta/",obs:"Texto inaugural"},
+        {id:1,colId:6,colunistaNome:"Matheus Theodore",titulo:"Melly e o álbum que reacende a chama por dentro",editoria:"Cultura Queer e Trans",dataEntrega:"2026-06-07",dataPublicacao:"2026-06-10",status:"Publicado",dataSubmissao:"07/06/2026",link:"https://ssexbbox.com/melly-e-o-album-que-reacende-a-chama-por-dentro/",obs:"Texto inaugural"},
+        {id:2,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataEntrega:"2026-06-02",dataPublicacao:"2026-06-05",status:"Publicado",dataSubmissao:"02/06/2026",link:"https://ssexbbox.com/turistas-da-submissao-voce-quer-o-fetiche-mas-nao-aguenta/",obs:"Texto inaugural"},
       ] : t;
 
       setTexts(seedTexts);
