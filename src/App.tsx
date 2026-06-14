@@ -1,0 +1,4056 @@
+import { useState, useEffect, useCallback } from "react";
+import "./styles.css";
+
+// ── Design System Baseado no Manual [SSEX BBOX] ─────────────
+const C = {
+  fontBase: "'Gibson', sans-serif",
+  fontDestaque: "'Oswald', sans-serif",
+  bg: "#000000",
+  s1: "#111111",
+  s2: "#181818",
+  s3: "#1e1e1e",
+  b: "#262626",
+  b2: "#333333",
+  accent: "#951F1E", // Red Wine Oficial
+  acDim: "#951F1E18",
+  acBg: "#1a0505",
+  purple: "#6d20ff", // Cores do Gradiente Secundário
+  purBg: "#10052a",
+  green: "#00ff6e",
+  grBg: "#001a0e",
+  amber: "#fff700",
+  amBg: "#1a1a00",
+  red: "#951F1E",
+  redBg: "#1a0505",
+  text: "#FFFFFF",
+  muted: "#CCCCCC", // Light Gray Oficial
+  dim: "#707070", // Dark Gray Oficial
+  faint: "#2e2e2e",
+  // Gradiente vibrante secundário do manual
+  gradient:
+    "linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #f575b)",
+};
+
+const MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+const MONTHS_SHORT = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
+
+const EDITORIAS = [
+  "Cultura Queer e Trans",
+  "História e Memória Política",
+  "Práticas Sexuais, Corpo e Relacionamentos",
+  "Diversidade, Equidade e Inclusão",
+  "Linguagem Neutra e Inovação Linguística",
+  "Tecnologia e Futuro",
+];
+
+// Mapeamento das editorias para as cores do arco-íris da marca
+const ED_COLORS = {
+  "Cultura Queer e Trans": "#f575b",
+  "História e Memória Política": "#fff700",
+  "Práticas Sexuais, Corpo e Relacionamentos": "#6d20ff",
+  "Diversidade, Equidade e Inclusão": "#00ff6e",
+  "Linguagem Neutra e Inovação Linguística": "#0098fa",
+  "Tecnologia e Futuro": "#ff8414",
+};
+
+const STATUS_CFG = {
+  Pendente: { color: C.dim, bg: C.s2 },
+  Enviado: { color: C.amber, bg: C.amBg },
+  "Em Revisão": { color: C.purple, bg: C.purBg },
+  Publicado: { color: C.green, bg: C.grBg },
+  Rejeitado: { color: C.accent, bg: C.acBg },
+};
+
+const COLUMNISTS = [
+  {
+    id: 6,
+    nome: "Matheus Theodore",
+    pronomes: "Ele/Dele",
+    sigla: "MT",
+    curso: "Publicidade e Propaganda, Anhanguera",
+    email: "matheustheodore@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Jornada do azarão: como corpos marginalizados criam novas narrativas",
+      "Comunidade BDSM e por que é acolhedora para corpos dissidentes",
+      "Juventude preta com gênero fluido e expressões pouco populares",
+    ],
+  },
+  {
+    id: 9,
+    nome: "Moon Kenzo",
+    pronomes: "Ela/Dela",
+    sigla: "MK",
+    curso: "Letras-Inglês, UVA",
+    email: "contatomoonkenzo@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",
+      "Turistas da Submissão: você quer o fetiche mas não aguenta minha disciplina",
+      "A Solidão de Quem Transcende: O preço de não ser 'a fácil'",
+    ],
+  },
+  {
+    id: 10,
+    nome: "Sabrina Kali Nogueira Marinho",
+    pronomes: "Ela/dela",
+    sigla: "SK",
+    curso: "Jornalismo, UFRJ",
+    email: "sabrinakali.noog@gmail.com",
+    editorias: [
+      "Linguagem Neutra e Inovação Linguística",
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",
+      "Pajubá e Gualín do TTK: dialetos nascidos na ditadura militar",
+      "Segregades do amor: a comunidade trans e a exclusão do amor romântico",
+    ],
+  },
+  {
+    id: 12,
+    nome: "Benjamim Siqueira Souto",
+    pronomes: "ele/elu",
+    sigla: "BS",
+    curso: "Ciências Humanas, Estácio de Sá",
+    email: "benjamimsiqueirasouto@gmail.com",
+    editorias: [
+      "Linguagem Neutra e Inovação Linguística",
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Desconstrução da cisheteronormatividade na arte contemporânea",
+      "Estética do desejo dissidente e as Não-Imagens",
+      "Ficção científica e criação de mundos como ferramentas de autoconhecimento LGBTQIA+",
+    ],
+  },
+  {
+    id: 13,
+    nome: "Isabella Piana",
+    pronomes: "Ela/Dela",
+    sigla: "IP",
+    curso: "Jornalismo, UFRGS",
+    email: "isabellacopatti@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Como a heterossexualidade compulsória ainda exige que LGBT performem papéis de gênero tradicionais",
+      "Como a pornografia molda nossos relacionamentos e a cultura ao nosso redor",
+      "Isso é mais queer do que você pensa: o que foi criado pela cultura queer e apropriado pela heteronormatividade",
+    ],
+  },
+  {
+    id: 14,
+    nome: "Raphael Mello",
+    pronomes: "Ele",
+    sigla: "RM",
+    curso: "Psicologia, UNIP",
+    email: "rafhaelpsicologo@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Entre o desejo e a sobrevivência: o que os relacionamentos LGBT revelam sobre afeto na contemporaneidade",
+      "Corpos desejáveis, corpos descartáveis: o mercado afetivo dentro da comunidade LGBT",
+      "Quando sair do armário não basta: as marcas psíquicas da colonialidade nos afetos LGBT",
+    ],
+  },
+  {
+    id: 15,
+    nome: "Eduardo Barbosa",
+    pronomes: "Ele/dele",
+    sigla: "EB",
+    curso: "Sociologia (Pós-Graduação), UFSCar",
+    email: "barbosaskid@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "Não-monogamia é mesmo uma política subversiva para homens gays?",
+      "O corpo musculoso da bicha é um problema para quem?",
+      "Por que o gay preto é pra sexo e o gay branco é pra namoro?",
+    ],
+  },
+  {
+    id: 16,
+    nome: "Callisto Jasmim Rodrigues Melo",
+    pronomes: "Ela/dela",
+    sigla: "CJ",
+    curso: "Jornalismo, Uni7 (Fortaleza)",
+    email: "callisto.jasmim@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "Como a geração Z está preservando e inovando os ballrooms?",
+      "Entrevistar LGBTQIAPN+ das décadas de 50 a 90 com documentos de memória afetiva",
+      "O que as práticas sexuais de pessoas trans revelam sobre como a sociedade as enxerga?",
+    ],
+  },
+  {
+    id: 18,
+    nome: "Guilherme Clisma Araujo de Sousa",
+    pronomes: "ele/dele",
+    sigla: "GC",
+    curso: "Letras Inglês, UFC",
+    email: "guilhermeendel@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Tecnologia e Futuro",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Sexo, afeto e liberdade: desaprendendo padrões para criar relações mais honestas",
+      "O corpo como território político: o que nossos desejos dizem sobre quem somos?",
+      "Prazer também é política: como o corpo se torna espaço de autonomia e resistência",
+    ],
+  },
+  {
+    id: 20,
+    nome: "José Luiz Alves Neto",
+    pronomes: "Ele/dele",
+    sigla: "JL",
+    curso: "Mestrado em Geografia, Unifal-MG",
+    email: "jose.alves@sou.unifal-mg.edu.br",
+    editorias: [
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Vida e memória insubmissas de pessoas LGBTQIA+ interioranas",
+      "Economia política do sexo no mundo globalizado",
+      "Relações de gênero e educação voltadas à diferença",
+    ],
+  },
+  {
+    id: 21,
+    nome: "Mariana Freire de Moraes",
+    pronomes: "Ela/dela",
+    sigla: "MF",
+    curso: "Estudos Literários, UNICAMP",
+    email: "m200590@dac.unicamp.br",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "O corpo do artista queer contemporâneo: na poesia, no teatro, na fotografia",
+      "Literatura lésbica brasileira: o erotismo nas obras",
+      "A rua e o flâneur queer: sempre estivemos nas ruas e a rua sempre foi o lugar do nosso desejo",
+    ],
+  },
+  {
+    id: 22,
+    nome: "Rafaela Silva Mancini",
+    pronomes: "Ela/dela",
+    sigla: "RS",
+    curso: "Letras, FFLCH USP",
+    email: "rafaelasmancini@gmail.com",
+    editorias: [
+      "Linguagem Neutra e Inovação Linguística",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Corpos femininos e a proteção contra ISTs",
+      "Corpo e Ocupação: Em quais lugares estamos?",
+      "Quem dita a palavra do corpo feminino?",
+    ],
+  },
+  {
+    id: 23,
+    nome: "Hayllon Pessoa",
+    pronomes: "Ele/dele",
+    sigla: "HP",
+    curso: "Letras + Cinema e Audiovisual + Mestrando",
+    email: "ahayllon@gmail.com",
+    editorias: ["Cultura Queer e Trans"],
+    pautas: [
+      "Do 'queer' ao 'cuir': a dissidência reinventada pelo cinema latino-americano",
+      "Cinema queer nordestino: corpos dissidentes longe do eixo",
+      "O fim inevitável? Repensando o sofrimento LGBTQIA+ nas telas",
+    ],
+  },
+  {
+    id: 24,
+    nome: "Jaime Santana Neto",
+    pronomes: "Ele/dele",
+    sigla: "JN",
+    curso: "Jornalismo (21 anos de profissão)",
+    email: "jaimenetoparticular@gmail.com",
+    editorias: [
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "Discutindo relações gays: dinâmicas e tabus",
+      "Homens gays 40+: escolhas e sacrifícios",
+      "Solidão Homoafetiva e seus desafios",
+    ],
+  },
+  {
+    id: 25,
+    nome: "Arthur Monteiro",
+    pronomes: "Ele/Dele",
+    sigla: "AM",
+    curso: "Jornalismo, Ceub",
+    email: "amm240699@gmail.com",
+    editorias: ["Cultura Queer e Trans"],
+    pautas: [
+      "O techno como expoente queer no Brasil e no mundo",
+      "Dez anos da MPB mais queer que nunca: linha temporal 2016-2026",
+      "O preço de ser LGBT na cultura pop dos anos 80",
+    ],
+  },
+  {
+    id: 28,
+    nome: "Hélio Lucas Carvalho Gonçalves",
+    pronomes: "Ele/dele",
+    sigla: "HL",
+    curso: "Jornalismo, UDF (Brasília)",
+    email: "heliolucascg@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Quem tem medo de gênero nas escolas?",
+      "A nova pornografia política: deepfakes sexuais como arma",
+      "A bancada do pânico moral: quando 'proteger crianças' vira desculpa para apagar diversidade",
+    ],
+  },
+  {
+    id: 29,
+    nome: "Lucas José Oliveira Souza",
+    pronomes: "Ele, dele",
+    sigla: "LJ",
+    curso: "Marketing, Anhanguera Caruaru",
+    email: "eu.luccasjose@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "SEXO É SÓ TEATRAL: sobre minha (re)descoberta com a prática sexual",
+      "XUXA E A INSERÇÃO QUEER NA TV",
+      "GRAFISMO DE MULHERES CIS E TRANS: arte e expressão no interior de Pernambuco",
+    ],
+  },
+  {
+    id: 30,
+    nome: "Pedro Augusto Pinto Luz",
+    pronomes: "Qualquer",
+    sigla: "PA",
+    curso: "Comunicação Social, UNEB",
+    email: "luzpedroaugusto@gmail.com",
+    editorias: ["Cultura Queer e Trans", "História e Memória Política"],
+    pautas: [
+      "Hannah de Girls e a relação com o corpo enquanto pessoa gorda",
+      "Paralelos entre cultura pop e experiências pessoais LGBTQ+",
+      "A escrita como necessidade: quando o outro me reconhece no texto",
+    ],
+  },
+  {
+    id: 33,
+    nome: "Vicente Buccarini",
+    pronomes: "Ele/Dele",
+    sigla: "VB",
+    curso: "Psicologia (Unifor) + Jornalismo (UFC)",
+    email: "vicentebuccarini@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "Masturbação: tabus e revelações",
+      "Banheiros masculinos como espaço de sociabilidade e repressão",
+      "Cultura tecno e os corpos que a habitam",
+    ],
+  },
+  {
+    id: 34,
+    nome: "Isabela",
+    pronomes: "ela/dela",
+    sigla: "IB",
+    curso: "Jornalismo, UFU",
+    email: "belacmellol@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Tecnologia e Futuro",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Direitos reprodutivos: pautas para corpos que geram",
+      "Gênero e identidade étnica: a emancipação das mulheres árabes",
+      "Cultura da pista de dança (ballroom, vogue) e histórias de resistência",
+    ],
+  },
+  {
+    id: 35,
+    nome: "Maria Clara Rocha e Silva",
+    pronomes: "ela/dela",
+    sigla: "MC",
+    curso: "Jornalismo, UFU",
+    email: "mariaclararochaesilvaxv@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Tecnologia e Futuro",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "Espelhos Distorcidos: deepfakes pornôs contra mulheres na política",
+      "Do romance de banca ao áudio por assinatura: erotismo pensado para mulheres",
+      "Eu sou marrom: Milo J e ancestralidade como disputa por pertencimento",
+    ],
+  },
+  {
+    id: 37,
+    nome: "Maria Eduarda Amorim",
+    pronomes: "Ela/Dela",
+    sigla: "ME",
+    curso: "Jornalismo, UFU",
+    email: "mariaeduardaamorimufu@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Tecnologia e Futuro",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "A mulher cis e a masturbação: tabu e normalidade",
+      "O trabalho sexual na contemporaneidade: neoliberalismo e OnlyFans",
+      "A teoria queer através de Gayle Rubin",
+    ],
+  },
+  {
+    id: 38,
+    nome: "Jean",
+    pronomes: "Ele",
+    sigla: "JE",
+    curso: "Gestão Pública, UFMG (formado em Letras)",
+    email: "jouto.contato@gmail.com",
+    editorias: ["Práticas Sexuais, Corpo e Relacionamentos"],
+    pautas: [
+      "Abuso sexual de meninos gays: o silêncio que adoece",
+      "Pornografia na construção do imaginário erótico gay",
+      "Como o belohorizontino flerta fora dos aplicativos?",
+    ],
+  },
+  {
+    id: 39,
+    nome: "Ágatha Sirigni Nunes",
+    pronomes: "ela/dela",
+    sigla: "AS",
+    curso: "Letras Português/Inglês, PUC-Rio",
+    email: "agathanunestexts@gmail.com",
+    editorias: [
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "A construção histórica da monogamia como modelo dominante",
+      "A ausência de referências LGBTQIAPN+ durante a infância",
+      "Por que os homens ocupam posição de sujeito nas narrativas sobre sexo?",
+    ],
+  },
+  {
+    id: 43,
+    nome: "Amanda Alves Braga",
+    pronomes: "Ela/Dela",
+    sigla: "AA",
+    curso: "Jornalismo, UNIVALE",
+    email: "bragaamanda487@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "História e Memória Política",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "A comunidade queer é cronicamente online?",
+      "O que o BDSM pode ensinar sobre comunicação e consentimento?",
+      "A linguagem queer secreta: códigos e encontros antes da era digital",
+    ],
+  },
+  {
+    id: 46,
+    nome: "Maria Eduarda Neves Costa",
+    pronomes: "Ela/Dela",
+    sigla: "MN",
+    curso: "Letras Português-Inglês, UFRJ",
+    email: "mariaeduardaneves.16144@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+      "Diversidade, Equidade e Inclusão",
+    ],
+    pautas: [
+      "A ausência de lésbicas 'masc' na dramaturgia brasileira",
+      "Novas possibilidades imagéticas da experiência lésbica: Carol Biazin",
+      "Qual a conceptualização discursiva da mulher sáfica nas redes sociais?",
+    ],
+  },
+  {
+    id: 52,
+    nome: "Gabriel Jóia de Macedo",
+    pronomes: "Ele/Dele",
+    sigla: "GJ",
+    curso: "Imagem e Som, UFSCar",
+    email: "gabrielvic.joia@gmail.com",
+    editorias: [
+      "Cultura Queer e Trans",
+      "Práticas Sexuais, Corpo e Relacionamentos",
+    ],
+    pautas: [
+      "Masculinidades trans em pauta: Como faz a barba?",
+      "Existe amor para esse corpo trans?",
+      "Pode um homem trans ser jogador de futebol?",
+    ],
+  },
+  {
+    id: 53,
+    nome: "Débora Adones",
+    pronomes: "Ela/dela",
+    sigla: "DA",
+    curso: "Jornalismo, UESB",
+    email: "deboraadones198@gmail.com",
+    editorias: ["Cultura Queer e Trans", "Diversidade, Equidade e Inclusão"],
+    pautas: [
+      "A vivência LGBTQ+ nas cidades de pequeno porte do Brasil",
+      "Como personagens explosivos fazem alusão à vivência queer no cinema",
+      "A democratização da educação sexual LGBTQ+ pela internet",
+    ],
+  },
+  {
+    id: 56,
+    nome: "Lucas Brito",
+    pronomes: "Ele/Dele",
+    sigla: "LB",
+    curso: "Doutorado em Sociologia, UnB",
+    email: "lbritodelima@gmail.com",
+    editorias: ["Práticas Sexuais, Corpo e Relacionamentos"],
+    pautas: [
+      "Sexo em locais públicos como cartografia do desejo nas cities",
+      "Sexo e o ambiente da política brasileira",
+      "Quanto mais sexo, menos sexo? Jovens e a recessão sexual",
+    ],
+  },
+];
+
+// ── Storage helpers ──────────────────────────────────────────────────────
+const GS_URL =
+  "https://script.google.com/macros/s/AKfycbxexxCMPdo609Yn8233g8SrR-4NaJXFM6JZQYdfMYJaCqRdjzR-Zg5-peWbrk_pb6M/exec";
+
+const save = async (k, v) => {
+  try {
+    await window.storage.set(k, JSON.stringify(v));
+  } catch (_) {}
+  try {
+    fetch(GS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ key: k, data: v }),
+    });
+  } catch (_) {}
+};
+
+const load = async (k, d = null) => {
+  try {
+    const r = await window.storage.get(k);
+    return r ? JSON.parse(r.value) : d;
+  } catch (_) {
+    return d;
+  }
+};
+
+const loadFromGS = () =>
+  new Promise((resolve) => {
+    const cbName = "gsCallback_" + Date.now();
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(null);
+    }, 12000);
+    window[cbName] = (data) => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.src =
+      GS_URL + "?action=getData&callback=" + cbName + "&t=" + Date.now();
+    script.onerror = () => {
+      clearTimeout(timeout);
+      resolve(null);
+    };
+    document.body.appendChild(script);
+  });
+
+// ── Tiny UI primitives ──────────────────────────────────────────────────
+const Label = ({ c = C.muted, ...p }) => (
+  <div
+    style={{
+      fontSize: 10,
+      color: c,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      marginBottom: 7,
+      fontFamily: C.fontBase,
+      ...p.style,
+    }}
+  >
+    {p.children}
+  </div>
+);
+
+const Badge = ({ label, color, bg, style = {} }) => (
+  <span
+    style={{
+      fontSize: 10,
+      fontWeight: 700,
+      color,
+      background: bg,
+      border: `1px solid ${color}44`,
+      padding: "2px 9px",
+      borderRadius: 3,
+      ...style,
+    }}
+  >
+    {label}
+  </span>
+);
+
+const Divider = ({ style = {} }) => (
+  <div style={{ borderBottom: `1px solid ${C.faint}`, ...style }} />
+);
+
+const Avatar = ({ sigla, size = 32, style = {} }) => (
+  <div
+    style={{
+      width: size,
+      height: size,
+      borderRadius: "50%",
+      background: C.acBg,
+      border: `1px solid ${C.accent}33`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: size * 0.3,
+      fontWeight: 700,
+      color: C.accent,
+      flexShrink: 0,
+      fontFamily: C.fontDestaque,
+      ...style,
+    }}
+  >
+    {sigla}
+  </div>
+);
+
+function Btn({
+  onClick,
+  children,
+  variant = "ghost",
+  small,
+  disabled,
+  style = {},
+}) {
+  const base = {
+    cursor: disabled ? "not-allowed" : "pointer",
+    borderRadius: 4,
+    fontSize: small ? 11 : 12,
+    fontWeight: 500,
+    opacity: disabled ? 0.4 : 1,
+    transition: "opacity 0.15s",
+    border: "none",
+    fontFamily: "inherit",
+  };
+  const v = {
+    ghost: {
+      background: "transparent",
+      border: `1px solid ${C.b2}`,
+      color: C.muted,
+      padding: small ? "4px 10px" : "7px 16px",
+    },
+    primary: {
+      background: C.acBg,
+      border: `1px solid ${C.accent}44`,
+      color: C.accent,
+      padding: small ? "4px 10px" : "7px 16px",
+    },
+    success: {
+      background: C.grBg,
+      border: `1px solid ${C.green}44`,
+      color: C.green,
+      padding: small ? "4px 10px" : "7px 16px",
+    },
+    danger: {
+      background: C.redBg,
+      border: `1px solid ${C.red}44`,
+      color: C.red,
+      padding: small ? "4px 10px" : "7px 16px",
+    },
+    purple: {
+      background: C.purBg,
+      border: `1px solid ${C.purple}44`,
+      color: C.purple,
+      padding: small ? "4px 10px" : "7px 16px",
+    },
+  };
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      style={{ ...base, ...v[variant], ...style }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Modal({ title, onClose, children, width = 560 }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#000a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 999,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: C.s1,
+          border: `1px solid ${C.b}`,
+          borderRadius: 8,
+          width: "100%",
+          maxWidth: width,
+          maxHeight: "85vh",
+          overflow: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "16px 20px",
+            borderBottom: `1px solid ${C.faint}`,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 15,
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            {title}
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: C.dim,
+              cursor: "pointer",
+              fontSize: 20,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ padding: 20 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, type = "text", style = {} }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{
+        width: "100%",
+        background: C.s2,
+        border: `1px solid ${C.b}`,
+        color: C.text,
+        padding: "9px 12px",
+        borderRadius: 4,
+        fontSize: 13,
+        boxSizing: "border-box",
+        outline: "none",
+        fontFamily: "inherit",
+        ...style,
+      }}
+    />
+  );
+}
+
+function Select({ value, onChange, options, placeholder, style = {} }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        background: C.s2,
+        border: `1px solid ${C.b}`,
+        color: value ? C.text : C.dim,
+        padding: "9px 12px",
+        borderRadius: 4,
+        fontSize: 13,
+        boxSizing: "border-box",
+        outline: "none",
+        fontFamily: "inherit",
+        ...style,
+      }}
+    >
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map((o) => (
+        <option key={o.value || o} value={o.value || o}>
+          {o.label || o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CFG[status] || STATUS_CFG["Enviado"];
+  return <Badge label={status} color={cfg.color} bg={cfg.bg} />;
+}
+
+// ── Login Screen ────────────────────────────────────────────────────────
+function LoginScreen({ onLogin, passwords, savePasswords }) {
+  const [step, setStep] = useState("role");
+  const [colId, setColId] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirma, setConfirma] = useState("");
+  const [erro, setErro] = useState("");
+  const [pendingCol, setPendingCol] = useState(null);
+
+  const showErro = (msg) => {
+    setErro(msg);
+    setTimeout(() => setErro(""), 2800);
+  };
+
+  const handleGestor = () => {
+    if (email.trim() === "criacao@ssexbbox.com" && senha === "g3staoss3xbb0x")
+      onLogin({ role: "gestor" });
+    else showErro("E-mail ou senha incorretos.");
+  };
+
+  const handleColunista = () => {
+    if (!colId) return;
+    const id = Number(colId);
+    const senhaAtual = passwords[id] || "123456";
+    if (senha !== senhaAtual) {
+      showErro("Senha incorreta.");
+      return;
+    }
+    if (senhaAtual === "123456") {
+      setPendingCol(id);
+      setSenha("");
+      setNovaSenha("");
+      setConfirma("");
+      setStep("trocar");
+    } else {
+      onLogin({ role: "colunista", colId: id });
+    }
+  };
+
+  const handleTrocarSenha = () => {
+    if (novaSenha.length < 6) {
+      showErro("A senha deve ter ao menos 6 caracteres.");
+      return;
+    }
+    if (novaSenha !== confirma) {
+      showErro("As senhas nao coincidem.");
+      return;
+    }
+    if (novaSenha === "123456") {
+      showErro("Escolha uma senha diferente da padrao.");
+      return;
+    }
+    const updated = { ...passwords, [pendingCol]: novaSenha };
+    savePasswords(updated);
+    onLogin({ role: "colunista", colId: pendingCol });
+  };
+
+  const col = pendingCol ? COLUMNISTS.find((c) => c.id === pendingCol) : null;
+  const ErrBox = () =>
+    erro ? (
+      <div
+        style={{
+          background: C.redBg,
+          border: `1px solid ${C.red}44`,
+          borderRadius: 4,
+          padding: "8px 12px",
+          fontSize: 12,
+          color: C.red,
+          marginBottom: 12,
+        }}
+      >
+        {erro}
+      </div>
+    ) : null;
+
+  return (
+    <div
+      style={{
+        background: C.bg,
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: C.fontBase,
+      }}
+    >
+      <div
+        style={{
+          width: 420,
+          background: C.s1,
+          border: `1px solid ${C.b}`,
+          borderRadius: 10,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Barra de Arco-Íris [SSEX BBOX] */}
+        <div style={{ height: 6, background: C.gradient, width: "100%" }} />
+
+        <div
+          style={{
+            padding: "22px 24px 18px",
+            borderBottom: `1px solid ${C.faint}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              color: C.accent,
+              fontWeight: 700,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            [SSEX BBOX]
+          </div>
+          <div
+            style={{
+              fontSize: 21,
+              fontWeight: 700,
+              color: C.text,
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            Gestão Editorial
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+            Noves Colunistas 2026
+          </div>
+        </div>
+        <div style={{ padding: 24 }}>
+          {step === "role" && (
+            <>
+              <Label>Como voce entra?</Label>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <button
+                  onClick={() => {
+                    setStep("gestor");
+                    setEmail("");
+                    setSenha("");
+                  }}
+                  style={{
+                    background: C.s2,
+                    border: `1px solid ${C.accent}33`,
+                    borderRadius: 6,
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: C.text,
+                      marginBottom: 3,
+                    }}
+                  >
+                    <span style={{ color: C.accent }}>Gestor</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted }}>
+                    Painel completo: textos, ideias, contrapartidas, calendario
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setStep("colunista");
+                    setColId("");
+                    setSenha("");
+                  }}
+                  style={{
+                    background: C.s2,
+                    border: `1px solid ${C.purple}33`,
+                    borderRadius: 6,
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: C.text,
+                      marginBottom: 3,
+                    }}
+                  >
+                    <span style={{ color: C.purple }}>Colunista</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted }}>
+                    Enviar textos, acompanhar publicacoes e contrapartidas
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === "gestor" && (
+            <>
+              <Label>Acesso Gestor</Label>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <Input
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="E-mail"
+                  type="email"
+                />
+                <Input
+                  value={senha}
+                  onChange={setSenha}
+                  placeholder="Senha"
+                  type="password"
+                />
+              </div>
+              <ErrBox />
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn
+                  onClick={() => {
+                    setStep("role");
+                    setErro("");
+                  }}
+                >
+                  ← Voltar
+                </Btn>
+                <Btn
+                  variant="primary"
+                  onClick={handleGestor}
+                  disabled={!email || !senha}
+                >
+                  Entrar
+                </Btn>
+              </div>
+            </>
+          )}
+
+          {step === "colunista" && (
+            <>
+              <Label>Acesso Colunista</Label>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <Select
+                  value={colId}
+                  onChange={setColId}
+                  placeholder="selecione seu nome"
+                  options={COLUMNISTS.map((c) => ({
+                    value: String(c.id),
+                    label: c.nome,
+                  }))}
+                />
+                <Input
+                  value={senha}
+                  onChange={setSenha}
+                  placeholder="Senha"
+                  type="password"
+                />
+              </div>
+              <ErrBox />
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn
+                  onClick={() => {
+                    setStep("role");
+                    setErro("");
+                  }}
+                >
+                  ← Voltar
+                </Btn>
+                <Btn
+                  variant="purple"
+                  onClick={handleColunista}
+                  disabled={!colId || !senha}
+                >
+                  Entrar
+                </Btn>
+              </div>
+            </>
+          )}
+
+          {step === "trocar" && col && (
+            <>
+              <div
+                style={{
+                  background: C.amBg,
+                  border: `1px solid ${C.amber}44`,
+                  borderRadius: 6,
+                  padding: "12px 14px",
+                  marginBottom: 18,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: C.amber,
+                    fontWeight: 700,
+                    marginBottom: 4,
+                  }}
+                >
+                  Primeiro acesso
+                </div>
+                <div style={{ fontSize: 12, color: C.muted }}>
+                  Ola,{" "}
+                  <strong style={{ color: C.text }}>
+                    {col.nome.split(" ")[0]}
+                  </strong>
+                  ! Por seguranca, crie uma senha pessoal antes de continuar.
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginBottom: 14,
+                }}
+              >
+                <div>
+                  <Label>Nova senha (min. 6 caracteres)</Label>
+                  <Input
+                    value={novaSenha}
+                    onChange={setNovaSenha}
+                    placeholder="Nova senha"
+                    type="password"
+                  />
+                </div>
+                <div>
+                  <Label>Confirmar nova senha</Label>
+                  <Input
+                    value={confirma}
+                    onChange={setConfirma}
+                    placeholder="Repita a senha"
+                    type="password"
+                  />
+                </div>
+              </div>
+              <ErrBox />
+              <Btn
+                variant="purple"
+                onClick={handleTrocarSenha}
+                disabled={!novaSenha || !confirma}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  textAlign: "center",
+                  boxSizing: "border-box",
+                }}
+              >
+                Salvar senha e entrar
+              </Btn>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── NavBar ──────────────────────────────────────────────────────────────
+function NavBar({
+  user,
+  colunista,
+  activeTab,
+  setActiveTab,
+  notifCount,
+  onLogout,
+  gsStatus,
+}) {
+  const gestorTabs = [
+    { id: "painel", label: "Painel" },
+    { id: "ideias", label: "Banco de Ideias" },
+    { id: "contrapartidas", label: "Contrapartidas" },
+    { id: "calendario", label: "Calendário" },
+    { id: "colunistas", label: "Colunistas" },
+  ];
+  const coliTabs = [
+    { id: "enviar", label: "Enviar Texto" },
+    { id: "meus", label: "Meus Textos" },
+    { id: "calendario", label: "Meu Calendário" },
+    { id: "contrapartidas", label: "Contrapartidas" },
+  ];
+  const tabs = user.role === "gestor" ? gestorTabs : coliTabs;
+  return (
+    <div
+      style={{
+        background: C.s1,
+        borderBottom: `1px solid ${C.faint}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 90,
+      }}
+    >
+      {/* Barra de Arco-Íris [SSEX BBOX] */}
+      <div
+        style={{
+          height: 4,
+          background: C.gradient,
+          width: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+        }}
+      />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "4px 20px 0 20px", // Acomoda a barra superior
+          height: 52,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              color: C.accent,
+              textTransform: "uppercase",
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            [SSEX BBOX]
+          </span>
+          <div style={{ display: "flex", gap: 2 }}>
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: activeTab === t.id ? C.text : C.dim,
+                  padding: "0 12px",
+                  height: 48,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: activeTab === t.id ? 600 : 400,
+                  borderBottom: `2px solid ${
+                    activeTab === t.id ? C.accent : "transparent"
+                  }`,
+                  transition: "color 0.15s",
+                  fontFamily: "inherit",
+                }}
+              >
+                {t.label}
+                {t.id === "painel" && notifCount > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 5,
+                      background: C.accent,
+                      color: "#fff",
+                      borderRadius: "50%",
+                      fontSize: 9,
+                      padding: "1px 5px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {notifCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {colunista && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Avatar sigla={colunista.sigla} size={26} />
+              <span style={{ fontSize: 12, color: C.muted }}>
+                {colunista.nome}
+              </span>
+            </div>
+          )}
+          {user.role === "gestor" && (
+            <span
+              style={{
+                fontSize: 12,
+                color: C.muted,
+                background: C.acBg,
+                border: `1px solid ${C.accent}33`,
+                padding: "3px 10px",
+                borderRadius: 3,
+              }}
+            >
+              Gestor
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              color:
+                gsStatus === "conectado"
+                  ? C.green
+                  : gsStatus === "offline"
+                  ? C.amber
+                  : C.dim,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background:
+                  gsStatus === "conectado"
+                    ? C.green
+                    : gsStatus === "offline"
+                    ? C.amber
+                    : C.dim,
+                display: "inline-block",
+              }}
+            />
+            {gsStatus === "conectado"
+              ? "Sheets"
+              : gsStatus === "offline"
+              ? "cache local"
+              : "..."}
+          </span>
+          <Btn small onClick={onLogout}>
+            Sair
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Stat Card ───────────────────────────────────────────────────────────
+
+function StatCard({ label, value, color = C.text, sub }) {
+  return (
+    <div
+      style={{
+        background: C.s1,
+        border: `1px solid ${C.faint}`,
+        borderRadius: 6,
+        padding: "14px 16px",
+        flex: 1,
+        minWidth: 100,
+      }}
+    >
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 700,
+          color,
+          lineHeight: 1,
+          fontFamily: C.fontDestaque,
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{sub}</div>
+      )}
+    </div>
+  );
+}
+
+// ── GESTOR: Painel ──────────────────────────────────────────────────────
+function PainelTab({ texts, updateTextStatus, notifications, markNotifRead }) {
+  const [filter, setFilter] = useState("todos");
+  const [search, setSearch] = useState("");
+  const [detail, setDetail] = useState(null);
+  const [editField, setEditField] = useState({
+    briefing: "",
+    prazo: "",
+    link: "",
+  });
+  const unread = notifications.filter((n) => !n.lida);
+  const filtered = texts.filter((t) => {
+    if (filter !== "todos" && t.status !== filter) return false;
+    if (
+      search &&
+      !t.titulo.toLowerCase().includes(search.toLowerCase()) &&
+      !t.colunistaNome.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
+    return true;
+  });
+  const counts = [
+    "Enviado",
+    "Em Revisão",
+    "Publicado",
+    "Rejeitado",
+    "Pendente",
+  ].reduce(
+    (a, s) => ({ ...a, [s]: texts.filter((t) => t.status === s).length }),
+    {}
+  );
+
+  const openDetail = (t) => {
+    setDetail(t);
+    setEditField({
+      briefing: t.briefing || "",
+      prazo: t.prazo || t.dataEntrega || "",
+      link: t.link || "",
+    });
+  };
+  const saveEdit = () => {
+    const updated = { ...detail, ...editField };
+    updateTextStatus(detail.id, detail.status, editField);
+    setDetail(updated);
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      {unread.length > 0 && (
+        <div
+          style={{
+            background: C.acBg,
+            border: `1px solid ${C.accent}33`,
+            borderRadius: 6,
+            padding: "12px 16px",
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>
+            🔔 {unread.length} nova{unread.length > 1 ? "s" : ""} notificação
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {unread.slice(0, 3).map((n) => (
+              <div
+                key={n.id}
+                onClick={() => markNotifRead(n.id)}
+                style={{
+                  fontSize: 11,
+                  color: C.muted,
+                  background: C.s1,
+                  border: `1px solid ${C.faint}`,
+                  borderRadius: 4,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                {n.mensagem.slice(0, 55)}…{" "}
+                <span style={{ color: C.accent }}>✓</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div
+        style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
+      >
+        <StatCard label="Total" value={texts.length} />
+        <StatCard
+          label="Enviados"
+          value={counts["Enviado"] || 0}
+          color={C.amber}
+        />
+        <StatCard
+          label="Em Revisão"
+          value={counts["Em Revisão"] || 0}
+          color={C.purple}
+        />
+        <StatCard
+          label="Publicados"
+          value={counts["Publicado"] || 0}
+          color={C.green}
+        />
+        <StatCard
+          label="Pendentes"
+          value={counts["Pendente"] || 0}
+          color={C.dim}
+        />
+      </div>
+      <div
+        style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}
+      >
+        <Input
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar por título ou colunista..."
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[
+            "todos",
+            "Enviado",
+            "Em Revisão",
+            "Publicado",
+            "Rejeitado",
+            "Pendente",
+          ].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                background: filter === f ? C.s3 : "transparent",
+                border: `1px solid ${filter === f ? C.accent + "44" : C.faint}`,
+                color: filter === f ? C.accent : C.dim,
+                padding: "6px 12px",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 11,
+                whiteSpace: "nowrap",
+                fontFamily: "inherit",
+              }}
+            >
+              {f === "todos" ? `Todos (${texts.length})` : f}
+            </button>
+          ))}
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.dim }}>
+          Nenhum texto encontrado.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {filtered.map((t) => {
+            const ec = ED_COLORS[t.editoria] || C.muted;
+            return (
+              <div
+                key={t.id}
+                onClick={() => openDetail(t)}
+                style={{
+                  background: C.s1,
+                  border: `1px solid ${C.faint}`,
+                  borderLeft: `4px solid ${ec}`, // Adiciona cor da editoria na lateral
+                  borderRadius: 4,
+                  padding: "12px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  cursor: "pointer",
+                }}
+              >
+                <Avatar
+                  sigla={COLUMNISTS.find((c) => c.id === t.colId)?.sigla || "?"}
+                  size={30}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: C.text,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {t.titulo}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                    {t.colunistaNome} ·{" "}
+                    <span style={{ color: ec }}>{t.editoria}</span>
+                  </div>
+                  {t.briefing && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: C.dim,
+                        marginTop: 2,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Briefing: {t.briefing.slice(0, 60)}
+                      {t.briefing.length > 60 ? "..." : ""}
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {(t.prazo || t.dataEntrega) && (
+                    <span style={{ fontSize: 11, color: C.dim }}>
+                      {t.prazo || t.dataEntrega}
+                    </span>
+                  )}
+                  <StatusBadge status={t.status} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {detail && (
+        <Modal
+          title="Detalhes do Texto"
+          onClose={() => setDetail(null)}
+          width={620}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <Avatar
+                sigla={
+                  COLUMNISTS.find((c) => c.id === detail.colId)?.sigla || "?"
+                }
+                size={40}
+              />
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>
+                  {detail.titulo}
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                  {detail.colunistaNome} · {detail.editoria}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ flex: 1 }}>
+                <Label>Submetido em</Label>
+                <div style={{ fontSize: 13 }}>{detail.dataSubmissao}</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <Label>Status</Label>
+                <StatusBadge status={detail.status} />
+              </div>
+            </div>
+            {detail.link && (
+              <div>
+                <Label>Link do Colunista</Label>
+                <a
+                  href={detail.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: 12,
+                    color: C.accent,
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {detail.link}
+                </a>
+              </div>
+            )}
+            <div
+              style={{
+                background: C.s2,
+                borderRadius: 6,
+                padding: 14,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <Label c={C.accent}>Editar Tarefa</Label>
+              <div>
+                <Label>Briefing / Instruções</Label>
+                <textarea
+                  value={editField.briefing}
+                  onChange={(e) =>
+                    setEditField((f) => ({ ...f, briefing: e.target.value }))
+                  }
+                  placeholder="Adicione briefing, instruções editoriais, contexto..."
+                  style={{
+                    width: "100%",
+                    background: C.s1,
+                    border: `1px solid ${C.b}`,
+                    color: C.text,
+                    padding: "9px 12px",
+                    borderRadius: 4,
+                    fontSize: 13,
+                    minHeight: 80,
+                    fontFamily: "inherit",
+                    resize: "vertical",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <Label>Prazo / Data de Entrega</Label>
+                  <Input
+                    type="date"
+                    value={editField.prazo}
+                    onChange={(v) => setEditField((f) => ({ ...f, prazo: v }))}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Label>Link Publicado</Label>
+                  <Input
+                    value={editField.link}
+                    onChange={(v) => setEditField((f) => ({ ...f, link: v }))}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+              <Btn variant="primary" onClick={saveEdit}>
+                Salvar alterações
+              </Btn>
+            </div>
+            <div>
+              <Label>Atualizar status</Label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["Em Revisão", "Publicado", "Rejeitado"].map((s) => {
+                  const cfg = STATUS_CFG[s];
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        updateTextStatus(detail.id, s, editField);
+                        setDetail({ ...detail, status: s });
+                      }}
+                      style={{
+                        background: cfg.bg,
+                        border: `1px solid ${cfg.color}44`,
+                        color: cfg.color,
+                        padding: "7px 14px",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── GESTOR: Banco de Ideias ─────────────────────────────────────────────
+function IdeiaTab({
+  ideasStatus,
+  setIdeaStatus,
+  addText,
+  gsTarefas,
+  ideiasExtra,
+  addIdeia,
+}) {
+  const [filter, setFilter] = useState("todas");
+  const [selected, setSelected] = useState([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [sugestaoModal, setSugestaoModal] = useState(false);
+  const [novaPauta, setNovaPauta] = useState("");
+  const [novaEd, setNovaEd] = useState("");
+  const [novaCol, setNovaCol] = useState("");
+
+  const allIdeas = COLUMNISTS.flatMap((col) =>
+    col.pautas.map((p, i) => {
+      const key = `${col.id}_${i}`;
+      return {
+        key,
+        colId: col.id,
+        nome: col.nome,
+        sigla: col.sigla,
+        editoria: col.editorias[0] || "",
+        pauta: p,
+        status: ideasStatus[key] || "disponível",
+      };
+    })
+  ).concat(
+    (ideiasExtra || []).map((e, i) => ({
+      key: `extra_${i}`,
+      colId: e.colId,
+      nome: e.nome,
+      sigla: e.sigla || "?",
+      editoria: e.editoria,
+      pauta: e.pauta,
+      status: ideasStatus[`extra_${i}`] || "sugestão",
+    }))
+  );
+
+  const filtered = allIdeas.filter(
+    (i) =>
+      i.status !== "excluída" && (filter === "todas" || i.status === filter)
+  );
+  const byCol = COLUMNISTS.map((col) => ({
+    col,
+    ideas: filtered.filter((i) => i.colId === col.id),
+  })).filter((g) => g.ideas.length > 0);
+
+  const toggleSel = (key) =>
+    setSelected((s) =>
+      s.includes(key)
+        ? s.filter((k) => k !== key)
+        : [...key, ...s.filter((k) => k !== key), key].slice(-87)
+    );
+  const selectAll = () => {
+    const keys = filtered.map((i) => i.key);
+    setSelected(selected.length === keys.length ? [] : keys);
+    setSelectMode(true);
+  };
+  const transformSelected = () => {
+    filtered
+      .filter((i) => selected.includes(i.key))
+      .forEach((idea) => {
+        addText({
+          colId: idea.colId,
+          colunistaNome: idea.nome,
+          titulo: idea.pauta,
+          editoria: idea.editoria,
+          dataEntrega: "",
+          obs: "Do banco de ideias",
+          status: "Pendente",
+        });
+        setIdeaStatus(idea.key, "em tarefa");
+      });
+    setSelected([]);
+    setSelectMode(false);
+  };
+
+  const ecolor = (ed) => ED_COLORS[ed] || C.muted;
+
+  return (
+    <div style={{ padding: 20 }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              marginBottom: 2,
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            Banco de Ideias
+          </div>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            {allIdeas.length} pautas ·{" "}
+            {allIdeas.filter((i) => i.status === "em tarefa").length} viraram
+            tarefas
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <Btn small onClick={() => setSugestaoModal(true)} variant="primary">
+            + Sugestão
+          </Btn>
+          <Btn
+            small
+            onClick={selectAll}
+            variant={selectMode ? "purple" : "ghost"}
+          >
+            {selectMode && selected.length > 0
+              ? `${selected.length} selecionadas`
+              : "Selecionar Todas"}
+          </Btn>
+          {selectMode && selected.length > 0 && (
+            <Btn small variant="success" onClick={transformSelected}>
+              → Transformar ({selected.length})
+            </Btn>
+          )}
+          {selectMode && (
+            <Btn
+              small
+              onClick={() => {
+                setSelectMode(false);
+                setSelected([]);
+              }}
+            >
+              Cancelar
+            </Btn>
+          )}
+        </div>
+      </div>
+      {/* Filters */}
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}
+      >
+        {["todas", "disponível", "em tarefa", "descartada", "sugestão"].map(
+          (f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                background: filter === f ? C.s3 : "transparent",
+                border: `1px solid ${filter === f ? C.accent + "44" : C.faint}`,
+                color: filter === f ? C.accent : C.dim,
+                padding: "5px 12px",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 11,
+                textTransform: "capitalize",
+                fontFamily: "inherit",
+              }}
+            >
+              {f}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* By columnist */}
+      {byCol.map(({ col, ideas }) => (
+        <div key={col.id} style={{ marginBottom: 28 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 12,
+            }}
+          >
+            <Avatar sigla={col.sigla} size={32} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                {col.nome}
+              </div>
+              <div style={{ fontSize: 11, color: C.dim }}>
+                {col.pronomes} · {col.curso}
+              </div>
+            </div>
+            <span style={{ fontSize: 11, color: C.dim, marginLeft: "auto" }}>
+              {ideas.length} pauta{ideas.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
+              gap: 10,
+            }}
+          >
+            {ideas.map((idea) => {
+              const ec = ecolor(idea.editoria);
+              const cfg_st =
+                idea.status === "em tarefa"
+                  ? { color: C.green, bg: C.grBg }
+                  : idea.status === "descartada"
+                  ? { color: C.red, bg: C.redBg }
+                  : idea.status === "sugestão"
+                  ? { color: C.purple, bg: C.purBg }
+                  : { color: C.amber, bg: C.amBg };
+              const isSel = selected.includes(idea.key);
+              return (
+                <div
+                  key={idea.key}
+                  onClick={() => selectMode && toggleSel(idea.key)}
+                  style={{
+                    background: isSel ? C.acBg : C.s1,
+                    border: `1px solid ${isSel ? C.accent + "66" : C.faint}`,
+                    borderRadius: 6,
+                    padding: 14,
+                    cursor: selectMode ? "pointer" : "default",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  {/* Editoria tag */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: ec,
+                        background: ec + "18",
+                        border: `1px solid ${ec}33`,
+                        padding: "2px 8px",
+                        borderRadius: 3,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        maxWidth: "70%",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {idea.editoria.split(":")[0]}
+                    </span>
+                    <Badge
+                      label={idea.status}
+                      color={cfg_st.color}
+                      bg={cfg_st.bg}
+                    />
+                  </div>
+                  {/* Pauta */}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: C.text,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {idea.pauta}
+                  </div>
+                  {/* Actions */}
+                  {!selectMode && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        marginTop: "auto",
+                      }}
+                    >
+                      {idea.status !== "em tarefa" && (
+                        <Btn
+                          small
+                          variant="primary"
+                          onClick={() => {
+                            addText({
+                              colId: idea.colId,
+                              colunistaNome: idea.nome,
+                              titulo: idea.pauta,
+                              editoria: idea.editoria,
+                              dataEntrega: "",
+                              obs: "Do banco de ideias",
+                              status: "Pendente",
+                            });
+                            setIdeaStatus(idea.key, "em tarefa");
+                          }}
+                        >
+                          → Criar Tarefa
+                        </Btn>
+                      )}
+                      {idea.status === "em tarefa" && (
+                        <Btn
+                          small
+                          onClick={() => setIdeaStatus(idea.key, "disponível")}
+                        >
+                          Reabrir
+                        </Btn>
+                      )}
+                      {idea.status !== "descartada" && (
+                        <Btn
+                          small
+                          variant="danger"
+                          onClick={() => setIdeaStatus(idea.key, "descartada")}
+                        >
+                          Descartar
+                        </Btn>
+                      )}
+                      {idea.status === "descartada" && (
+                        <Btn
+                          small
+                          variant="danger"
+                          style={{ background: C.red, color: C.text }}
+                          onClick={() => setIdeaStatus(idea.key, "excluída")}
+                        >
+                          Excluir Definitivamente
+                        </Btn>
+                      )}
+                    </div>
+                  )}
+                  {selectMode && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontSize: 11,
+                        color: isSel ? C.accent : C.dim,
+                      }}
+                    >
+                      {isSel ? "✓ Selecionada" : "Clique para selecionar"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Sugestão modal */}
+      {sugestaoModal && (
+        <Modal
+          title="Adicionar Sugestão de Pauta"
+          onClose={() => setSugestaoModal(false)}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <Label>Colunista</Label>
+              <Select
+                value={novaCol}
+                onChange={setNovaCol}
+                placeholder="— selecione —"
+                options={COLUMNISTS.map((c) => ({
+                  value: String(c.id),
+                  label: c.nome,
+                }))}
+              />
+            </div>
+            <div>
+              <Label>Editoria</Label>
+              <Select
+                value={novaEd}
+                onChange={setNovaEd}
+                placeholder="— selecione —"
+                options={EDITORIAS.map((e) => ({ value: e, label: e }))}
+              />
+            </div>
+            <div>
+              <Label>Pauta sugerida</Label>
+              <textarea
+                value={novaPauta}
+                onChange={(e) => setNovaPauta(e.target.value)}
+                placeholder="Descreva a pauta..."
+                style={{
+                  width: "100%",
+                  background: C.s2,
+                  border: `1px solid ${C.b}`,
+                  color: C.text,
+                  padding: "9px 12px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  minHeight: 80,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <Btn
+              variant="primary"
+              onClick={() => {
+                if (!novaCol || !novaPauta) return;
+                const col = COLUMNISTS.find((c) => c.id === Number(novaCol));
+                addIdeia({
+                  colId: Number(novaCol),
+                  nome: col?.nome || "",
+                  sigla: col?.sigla || "?",
+                  editoria: novaEd || col?.editorias[0] || "",
+                  pauta: novaPauta,
+                });
+                setNovaPauta("");
+                setNovaCol("");
+                setNovaEd("");
+                setSugestaoModal(false);
+              }}
+              disabled={!novaCol || !novaPauta}
+            >
+              Adicionar Pauta
+            </Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── GESTOR: Contrapartidas ──────────────────────────────────────────────
+function ContrapartidasTab({
+  contrapartidas,
+  toggleContrapartida,
+  texts,
+  contraExtra,
+  setContraExtra,
+}) {
+  const [editCol, setEditCol] = useState(null);
+  const [editData, setEditData] = useState({
+    foto: "",
+    descricao: "",
+    obs: "",
+  });
+  const tipos = [
+    { key: "certificadoHoras", label: "Cert. Horas" },
+    { key: "acessoOficinas", label: "Oficinas" },
+    { key: "certificadoFormacao", label: "Cert. Formação" },
+  ];
+  const total = COLUMNISTS.length * tipos.length;
+  const done = COLUMNISTS.reduce(
+    (acc, c) => acc + tipos.filter((t) => contrapartidas[c.id]?.[t.key]).length,
+    0
+  );
+
+  const openEdit = (col) => {
+    const ex = contraExtra[col.id] || {};
+    setEditData({
+      foto: ex.foto || "",
+      descricao: ex.descricao || "",
+      obs: ex.obs || "",
+    });
+    setEditCol(col);
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              marginBottom: 2,
+              fontFamily: C.fontDestaque,
+            }}
+          >
+            Gestão de Contrapartidas
+          </div>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            {done}/{total} itens concluídos ({Math.round((done / total) * 100)}
+            %)
+          </div>
+        </div>
+        <div
+          style={{
+            height: 4,
+            flex: 1,
+            maxWidth: 300,
+            background: C.faint,
+            borderRadius: 2,
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${(done / total) * 100}%`,
+              background: C.green,
+              borderRadius: 2,
+              transition: "width 0.5s",
+            }}
+          />
+        </div>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
+          gap: 14,
+        }}
+      >
+        {COLUMNISTS.map((col) => {
+          const cp = contrapartidas[col.id] || {};
+          const ex = contraExtra[col.id] || {};
+          const pub = texts.filter(
+            (t) => t.colId === col.id && t.status === "Publicado"
+          ).length;
+          const allDone = tipos.every((t) => cp[t.key]);
+          return (
+            <div
+              key={col.id}
+              style={{
+                background: C.s1,
+                border: `1px solid ${allDone ? C.green + "44" : C.faint}`,
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
+              {/* Photo + name header */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: "14px 14px 10px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 6,
+                    background: C.s2,
+                    border: `1px solid ${C.faint}`,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {ex.foto ? (
+                    <img
+                      src={ex.foto}
+                      alt={col.nome}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => (e.target.style.display = "none")}
+                    />
+                  ) : (
+                    <span
+                      style={{ fontSize: 18, fontWeight: 700, color: C.accent }}
+                    >
+                      {col.sigla}
+                    </span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: allDone ? C.green : C.text,
+                    }}
+                  >
+                    {col.nome}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+                    {col.pronomes}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: C.green,
+                      marginTop: 4,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {pub} publicado{pub !== 1 ? "s" : ""}
+                  </div>
+                </div>
+                <button
+                  onClick={() => openEdit(col)}
+                  style={{
+                    background: "none",
+                    border: `1px solid ${C.faint}`,
+                    color: C.dim,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 11,
+                    padding: "3px 8px",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  ✎ Editar
+                </button>
+              </div>
+              {/* Contrapartidas toggles */}
+              <div style={{ display: "flex", gap: 6, padding: "0 14px 10px" }}>
+                {tipos.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => toggleContrapartida(col.id, t.key)}
+                    style={{
+                      flex: 1,
+                      background: cp[t.key] ? C.grBg : C.s2,
+                      border: `1px solid ${
+                        cp[t.key] ? C.green + "44" : C.faint
+                      }`,
+                      color: cp[t.key] ? C.green : C.dim,
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      padding: "6px 4px",
+                      fontSize: 10,
+                      fontWeight: cp[t.key] ? 700 : 400,
+                      textAlign: "center",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {cp[t.key] ? "✓ " : ""}
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {/* Description preview */}
+              {(ex.descricao || ex.obs) && (
+                <div style={{ padding: "0 14px 12px" }}>
+                  {ex.descricao && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: C.muted,
+                        fontStyle: "italic",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {ex.descricao.slice(0, 80)}
+                      {ex.descricao.length > 80 ? "..." : ""}
+                    </div>
+                  )}
+                  {ex.obs && (
+                    <div style={{ fontSize: 11, color: C.dim }}>
+                      {ex.obs.slice(0, 60)}
+                      {ex.obs.length > 60 ? "..." : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Edit modal */}
+      {editCol && (
+        <Modal
+          title={`Editar — ${editCol.nome}`}
+          onClose={() => setEditCol(null)}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <Label>URL da Foto (300×300)</Label>
+              <Input
+                value={editData.foto}
+                onChange={(v) => setEditData((d) => ({ ...d, foto: v }))}
+                placeholder="https://..."
+              />
+              {editData.foto && (
+                <img
+                  src={editData.foto}
+                  alt="preview"
+                  style={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 6,
+                    marginTop: 8,
+                    border: `1px solid ${C.faint}`,
+                  }}
+                />
+              )}
+            </div>
+            <div>
+              <Label>Descrição / Bio</Label>
+              <textarea
+                value={editData.descricao}
+                onChange={(e) =>
+                  setEditData((d) => ({ ...d, descricao: e.target.value }))
+                }
+                placeholder="Breve descrição do colunista..."
+                style={{
+                  width: "100%",
+                  background: C.s2,
+                  border: `1px solid ${C.b}`,
+                  color: C.text,
+                  padding: "9px 12px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  minHeight: 70,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div>
+              <Label>Observações internas</Label>
+              <textarea
+                value={editData.obs}
+                onChange={(e) =>
+                  setEditData((d) => ({ ...d, obs: e.target.value }))
+                }
+                placeholder="Notas internas, avisos, acordos..."
+                style={{
+                  width: "100%",
+                  background: C.s2,
+                  border: `1px solid ${C.b}`,
+                  color: C.text,
+                  padding: "9px 12px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  minHeight: 60,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <Btn
+              variant="primary"
+              onClick={() => {
+                setContraExtra((prev) => {
+                  const n = { ...prev, [editCol.id]: editData };
+                  save("sx2_contraExtra", n);
+                  return n;
+                });
+                setEditCol(null);
+              }}
+            >
+              Salvar
+            </Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── GESTOR: Calendário ──────────────────────────────────────────────────
+function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
+  const START_YEAR = 2026;
+  const START_MONTH = 5;
+  const months12 = Array.from({ length: 12 }, (_, i) => {
+    const mi = (START_MONTH + i) % 12;
+    const yr = START_YEAR + Math.floor((START_MONTH + i) / 12);
+    return {
+      label: `${MONTHS_SHORT[mi]} ${yr}`,
+      fullLabel: `${MONTHS[mi]} de ${yr}`,
+      mi,
+      yr,
+      key: `${yr}-${String(mi + 1).padStart(2, "0")}`,
+    };
+  });
+  const [viewIdx, setViewIdx] = useState(0);
+  const [addPautaOpen, setAddPautaOpen] = useState(false);
+  const [newColId, setNewColId] = useState("");
+  const [newPauta, setNewPauta] = useState("");
+
+  const cur = months12[viewIdx];
+  const mKey = cur.key;
+
+  const availCols = COLUMNISTS.filter((c) =>
+    (calendar[c.id] || []).includes(cur.mi)
+  );
+  const meTexts = texts.filter((t) => {
+    if (!t.prazo && !t.dataEntrega) return false;
+    const d = new Date(t.prazo || t.dataEntrega);
+    return !isNaN(d) && d.getMonth() === cur.mi && d.getFullYear() === cur.yr;
+  });
+  const mPautas = calPautas[mKey] || [];
+
+  const addPauta = () => {
+    if (!newColId || !newPauta) return;
+    const col = COLUMNISTS.find((c) => c.id === Number(newColId));
+    const entry = {
+      colId: Number(newColId),
+      nome: col?.nome || "",
+      pauta: newPauta,
+      editoria: col?.editorias[0] || "",
+    };
+    const updated = {
+      ...calPautas,
+      [mKey]: [...(calPautas[mKey] || []), entry],
+    };
+    setCalPautas(updated);
+    save("sx2_calPautas", updated);
+    setNewColId("");
+    setNewPauta("");
+    setAddPautaOpen(false);
+  };
+  const removePauta = (idx) => {
+    const updated = {
+      ...calPautas,
+      [mKey]: mPautas.filter((_, i) => i !== idx),
+    };
+    setCalPautas(updated);
+    save("sx2_calPautas", updated);
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          marginBottom: 4,
+          fontFamily: C.fontDestaque,
+        }}
+      >
+        Calendário Editorial
+      </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>
+        A partir de 15 de junho de 2026
+      </div>
+      <div
+        style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}
+      >
+        {months12.map((m, i) => {
+          const hasPautas = (calPautas[m.key] || []).length > 0;
+          const hasTexts =
+            texts.filter((t) => {
+              const d = new Date(t.prazo || t.dataEntrega || "");
+              return (
+                !isNaN(d) && d.getMonth() === m.mi && d.getFullYear() === m.yr
+              );
+            }).length > 0;
+          return (
+            <button
+              key={i}
+              onClick={() => setViewIdx(i)}
+              style={{
+                background: viewIdx === i ? C.acBg : "transparent",
+                border: `1px solid ${
+                  viewIdx === i ? C.accent + "44" : C.faint
+                }`,
+                color:
+                  viewIdx === i
+                    ? C.accent
+                    : hasPautas || hasTexts
+                    ? C.text
+                    : C.dim,
+                borderRadius: 4,
+                cursor: "pointer",
+                padding: "7px 12px",
+                fontSize: 11,
+                fontWeight: viewIdx === i ? 700 : 400,
+                position: "relative",
+                fontFamily: "inherit",
+              }}
+            >
+              {m.label}
+              {(hasPautas || hasTexts) && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    right: 3,
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: C.accent,
+                  }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: C.accent,
+          marginBottom: 16,
+          fontFamily: C.fontDestaque,
+        }}
+      >
+        {cur.fullLabel}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <Label>Pautas agendadas ({mPautas.length})</Label>
+            <Btn small variant="primary" onClick={() => setAddPautaOpen(true)}>
+              + Adicionar
+            </Btn>
+          </div>
+          {mPautas.length === 0 ? (
+            <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
+              Nenhuma pauta agendada.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {mPautas.map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: C.s1,
+                    border: `1px solid ${C.faint}`,
+                    borderRadius: 4,
+                    padding: "10px 12px",
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <Avatar
+                    sigla={
+                      COLUMNISTS.find((c) => c.id === p.colId)?.sigla || "?"
+                    }
+                    size={26}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{ fontSize: 12, fontWeight: 600, color: C.text }}
+                    >
+                      {p.pauta}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+                      {p.nome}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removePauta(i)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: C.dim,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div>
+          <Label>Entregas previstas ({meTexts.length})</Label>
+          {meTexts.length === 0 ? (
+            <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
+              Nenhuma entrega agendada.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {meTexts.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    background: C.s1,
+                    border: `1px solid ${C.faint}`,
+                    borderRadius: 4,
+                    padding: "10px 12px",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}
+                  >
+                    {t.titulo}
+                  </div>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    <span style={{ fontSize: 11, color: C.dim }}>
+                      {t.colunistaNome}
+                    </span>
+                    <StatusBadge status={t.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <Label>
+          Colunistas disponíveis em {cur.fullLabel} ({availCols.length})
+        </Label>
+        {availCols.length === 0 ? (
+          <div style={{ fontSize: 12, color: C.dim }}>
+            Ninguém indicou preferência por este mês.
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {availCols.map((c) => (
+              <div
+                key={c.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: C.s1,
+                  border: `1px solid ${C.faint}`,
+                  borderRadius: 4,
+                  padding: "8px 12px",
+                }}
+              >
+                <Avatar sigla={c.sigla} size={24} />
+                <span style={{ fontSize: 12 }}>{c.nome}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {addPautaOpen && (
+        <Modal
+          title={`Adicionar Pauta — ${cur.fullLabel}`}
+          onClose={() => setAddPautaOpen(false)}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <Label>Colunista</Label>
+              <Select
+                value={newColId}
+                onChange={setNewColId}
+                placeholder="— selecione —"
+                options={COLUMNISTS.map((c) => ({
+                  value: String(c.id),
+                  label: c.nome,
+                }))}
+              />
+            </div>
+            {newColId && (
+              <div>
+                <Label>Sugestões de pauta</Label>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    marginBottom: 8,
+                  }}
+                >
+                  {COLUMNISTS.find(
+                    (c) => c.id === Number(newColId)
+                  )?.pautas.map((p, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setNewPauta(p)}
+                      style={{
+                        padding: "6px 10px",
+                        background: newPauta === p ? C.acBg : C.s2,
+                        border: `1px solid ${
+                          newPauta === p ? C.accent + "44" : C.faint
+                        }`,
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        color: newPauta === p ? C.accent : C.text,
+                      }}
+                    >
+                      {p}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <Label>Ou escreva uma pauta livre</Label>
+              <Input
+                value={newPauta}
+                onChange={setNewPauta}
+                placeholder="Título ou tema da pauta..."
+              />
+            </div>
+            <Btn
+              variant="primary"
+              onClick={addPauta}
+              disabled={!newColId || !newPauta}
+            >
+              Adicionar ao mês
+            </Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── GESTOR: Colunistas ──────────────────────────────────────────────────
+function ColunistasTab({ texts, contraExtra }) {
+  const [search, setSearch] = useState("");
+  const filtered = COLUMNISTS.filter(
+    (c) =>
+      !search ||
+      c.nome.toLowerCase().includes(search.toLowerCase()) ||
+      c.curso.toLowerCase().includes(search.toLowerCase())
+  );
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 16 }}>
+        <Input
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar colunista ou instituição..."
+        />
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
+          gap: 12,
+        }}
+      >
+        {filtered.map((col) => {
+          const myTexts = texts.filter((t) => t.colId === col.id);
+          const pub = myTexts.filter((t) => t.status === "Publicado").length;
+          const ex = contraExtra[col.id] || {};
+          return (
+            <div
+              key={col.id}
+              style={{
+                background: C.s1,
+                border: `1px solid ${C.faint}`,
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: "16px 14px 12px",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    background: C.s2,
+                    border: `1px solid ${C.accent}33`,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {ex.foto ? (
+                    <img
+                      src={ex.foto}
+                      alt={col.nome}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => (e.target.style.display = "none")}
+                    />
+                  ) : (
+                    <span
+                      style={{ fontSize: 16, fontWeight: 700, color: C.accent }}
+                    >
+                      {col.sigla}
+                    </span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: C.text,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {col.nome}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+                    {col.pronomes}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: C.muted,
+                      marginTop: 1,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {col.curso}
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", borderTop: `1px solid ${C.faint}` }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    padding: "8px 0",
+                    textAlign: "center",
+                    borderRight: `1px solid ${C.faint}`,
+                  }}
+                >
+                  <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>
+                    {myTexts.length}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.dim }}>envios</div>
+                </div>
+                <div style={{ flex: 1, padding: "8px 0", textAlign: "center" }}>
+                  <div
+                    style={{ fontSize: 16, fontWeight: 700, color: C.green }}
+                  >
+                    {pub}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.dim }}>publicados</div>
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderTop: `1px solid ${C.faint}`,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 4,
+                }}
+              >
+                {col.editorias.map((e, i) => {
+                  const ec = ED_COLORS[e] || C.muted;
+                  return (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: 9,
+                        color: ec,
+                        background: ec + "18",
+                        border: `1px solid ${ec}33`,
+                        padding: "2px 7px",
+                        borderRadius: 3,
+                      }}
+                    >
+                      {e.split(":")[0].split(",")[0]}
+                    </span>
+                  );
+                })}
+              </div>
+              {ex.descricao && (
+                <div
+                  style={{
+                    padding: "0 14px 12px",
+                    fontSize: 11,
+                    color: C.dim,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {ex.descricao.slice(0, 100)}
+                  {ex.descricao.length > 100 ? "..." : ""}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
+function EnviarTab({ colunista, addText, addIdeia }) {
+  const [titulo, setTitulo] = useState("");
+  const [editoria, setEditoria] = useState("");
+  const [dataEntrega, setDataEntrega] = useState("");
+  const [link, setLink] = useState("");
+  const [obs, setObs] = useState("");
+  const [sent, setSent] = useState(false);
+  const [sugerirMode, setSugerirMode] = useState(false);
+  const [sugestao, setSugestao] = useState("");
+  const [sugestaoEd, setSugestaoEd] = useState("");
+
+  const handleSubmit = () => {
+    if (!titulo || !editoria) return;
+    addText({
+      colId: colunista.id,
+      colunistaNome: colunista.nome,
+      titulo,
+      editoria,
+      dataEntrega,
+      link,
+      obs,
+    });
+    setTitulo("");
+    setEditoria("");
+    setDataEntrega("");
+    setLink("");
+    setObs("");
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+  };
+
+  return (
+    <div style={{ padding: 20, maxWidth: 600 }}>
+      {!sugerirMode ? (
+        <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 20,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  marginBottom: 4,
+                  fontFamily: C.fontDestaque,
+                }}
+              >
+                Enviar Texto
+              </div>
+              <div style={{ fontSize: 12, color: C.muted }}>
+                Preencha os dados e clique em enviar.
+              </div>
+            </div>
+            <Btn small variant="purple" onClick={() => setSugerirMode(true)}>
+              + Sugerir Pauta
+            </Btn>
+          </div>
+          {sent && (
+            <div
+              style={{
+                background: C.grBg,
+                border: `1px solid ${C.green}44`,
+                borderRadius: 6,
+                padding: "12px 16px",
+                marginBottom: 16,
+                fontSize: 13,
+                color: C.green,
+                fontWeight: 600,
+              }}
+            >
+              ✓ Texto enviado!
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <Label>Título do Texto *</Label>
+              <Input
+                value={titulo}
+                onChange={setTitulo}
+                placeholder="Título do seu texto"
+              />
+            </div>
+            <div>
+              <Label>Editoria *</Label>
+              <Select
+                value={editoria}
+                onChange={setEditoria}
+                placeholder="— selecione —"
+                options={colunista.editorias.map((e) => ({
+                  value: e,
+                  label: e,
+                }))}
+              />
+            </div>
+            <div>
+              <Label>Data de Entrega</Label>
+              <Input
+                type="date"
+                value={dataEntrega}
+                onChange={setDataEntrega}
+              />
+            </div>
+            <div>
+              <Label>Link ou URL do Arquivo</Label>
+              <Input
+                value={link}
+                onChange={setLink}
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <textarea
+                value={obs}
+                onChange={(e) => setObs(e.target.value)}
+                placeholder="Notas adicionais..."
+                style={{
+                  width: "100%",
+                  background: C.s2,
+                  border: `1px solid ${C.b}`,
+                  color: C.text,
+                  padding: "9px 12px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  minHeight: 80,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn
+                variant="primary"
+                onClick={handleSubmit}
+                disabled={!titulo || !editoria}
+              >
+                Enviar Texto
+              </Btn>
+              <span style={{ fontSize: 11, color: C.dim, alignSelf: "center" }}>
+                * obrigatórios
+              </span>
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 24,
+              padding: 16,
+              background: C.s2,
+              borderRadius: 6,
+              border: `1px solid ${C.faint}`,
+            }}
+          >
+            <Label>Suas pautas sugeridas na seleção</Label>
+            {colunista.pautas.map((p, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  setTitulo(p);
+                  setEditoria(colunista.editorias[0] || "");
+                }}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginBottom: 8,
+                  cursor: "pointer",
+                }}
+              >
+                <span style={{ color: C.accent, flexShrink: 0 }}>→</span>
+                <span style={{ fontSize: 12, color: C.muted }}>{p}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 20,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  marginBottom: 4,
+                  fontFamily: C.fontDestaque,
+                }}
+              >
+                Sugerir Nova Pauta
+              </div>
+              <div style={{ fontSize: 12, color: C.muted }}>
+                Sua sugestão vai para o Banco de Ideias da gestão.
+              </div>
+            </div>
+            <Btn small onClick={() => setSugerirMode(false)}>
+              ← Voltar
+            </Btn>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <Label>Editoria</Label>
+              <Select
+                value={sugestaoEd}
+                onChange={setSugestaoEd}
+                placeholder="— selecione —"
+                options={colunista.editorias.map((e) => ({
+                  value: e,
+                  label: e,
+                }))}
+              />
+            </div>
+            <div>
+              <Label>Pauta sugerida</Label>
+              <textarea
+                value={sugestao}
+                onChange={(e) => setSugestao(e.target.value)}
+                placeholder="Descreva sua ideia de pauta..."
+                style={{
+                  width: "100%",
+                  background: C.s2,
+                  border: `1px solid ${C.b}`,
+                  color: C.text,
+                  padding: "9px 12px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  minHeight: 100,
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <Btn
+              variant="purple"
+              disabled={!sugestao}
+              onClick={() => {
+                addIdeia({
+                  colId: colunista.id,
+                  nome: colunista.nome,
+                  sigla: colunista.sigla,
+                  editoria: sugestaoEd || colunista.editorias[0] || "",
+                  pauta: sugestao,
+                });
+                setSugestao("");
+                setSugestaoEd("");
+                setSugerirMode(false);
+              }}
+            >
+              Enviar Sugestão
+            </Btn>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
+function MeusTextosTab({ texts }) {
+  const pub = texts.filter((t) => t.status === "Publicado").length;
+  const pen = texts.filter((t) =>
+    ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
+  ).length;
+  return (
+    <div style={{ padding: 20 }}>
+      <div
+        style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
+      >
+        <StatCard label="Total enviados" value={texts.length} />
+        <StatCard label="Publicados" value={pub} color={C.green} />
+        <StatCard label="Em andamento" value={pen} color={C.amber} />
+      </div>
+      {texts.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.dim }}>
+          Você ainda não enviou nenhum texto.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {texts
+            .slice()
+            .reverse()
+            .map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  background: C.s1,
+                  border: `1px solid ${C.faint}`,
+                  borderRadius: 6,
+                  padding: "14px 16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      flex: 1,
+                      paddingRight: 12,
+                    }}
+                  >
+                    {t.titulo}
+                  </div>
+                  <StatusBadge status={t.status} />
+                </div>
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, color: C.dim }}>
+                    {t.editoria}
+                  </span>
+                  {(t.prazo || t.dataEntrega) && (
+                    <span style={{ fontSize: 11, color: C.dim }}>
+                      Prazo: {t.prazo || t.dataEntrega}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: C.dim }}>
+                    Enviado: {t.dataSubmissao}
+                  </span>
+                </div>
+                {t.briefing && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: C.muted,
+                      background: C.s2,
+                      borderRadius: 4,
+                      padding: "8px 10px",
+                    }}
+                  >
+                    <span style={{ color: C.accent, fontWeight: 600 }}>
+                      Briefing:
+                    </span>{" "}
+                    {t.briefing}
+                  </div>
+                )}
+                {t.link && (
+                  <a
+                    href={t.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      fontSize: 11,
+                      color: C.accent,
+                      display: "block",
+                      marginTop: 6,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {t.link}
+                  </a>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── COLUNISTA: Calendário ────────────────────────────────────────────────
+function MeuCalendarioTab({ calendar, toggleCalendar }) {
+  return (
+    <div style={{ padding: 20, maxWidth: 600 }}>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          marginBottom: 4,
+          fontFamily: C.fontDestaque,
+        }}
+      >
+        Meu Calendário de Entregas
+      </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>
+        Indique os meses em que você tem disponibilidade para entregar textos.
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3,1fr)",
+          gap: 10,
+        }}
+      >
+        {MONTHS.map((m, i) => {
+          const on = (calendar || []).includes(i);
+          return (
+            <button
+              key={i}
+              onClick={() => toggleCalendar(i)}
+              style={{
+                background: on ? C.acBg : C.s1,
+                border: `1px solid ${on ? C.accent + "44" : C.faint}`,
+                borderRadius: 6,
+                padding: "14px 10px",
+                cursor: "pointer",
+                textAlign: "center",
+                transition: "all 0.15s",
+                fontFamily: "inherit",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: on ? C.accent : C.text,
+                  marginBottom: 4,
+                }}
+              >
+                {m}
+              </div>
+              <div style={{ fontSize: 11, color: on ? C.accent : C.dim }}>
+                {on ? "✓ Disponível" : "—"}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── COLUNISTA: Contrapartidas ────────────────────────────────────────────
+function MinhasContrapartidasTab({ contrapartidas }) {
+  const tipos = [
+    {
+      key: "certificadoHoras",
+      label: "Certificado de Horas Complementares",
+      desc: "Certificado para atividades complementares universitárias",
+    },
+    {
+      key: "acessoOficinas",
+      label: "Acesso a Oficinas Exclusivas",
+      desc: "Oficinas exclusivas de criação de texto do instituto",
+    },
+    {
+      key: "certificadoFormacao",
+      label: "Certificado de Formação",
+      desc: "Certificado de formação de colunista [SSEX BBOX]",
+    },
+  ];
+  const done = tipos.filter((t) => contrapartidas[t.key]).length;
+  return (
+    <div style={{ padding: 20, maxWidth: 600 }}>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          marginBottom: 4,
+          fontFamily: C.fontDestaque,
+        }}
+      >
+        Minhas Contrapartidas
+      </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+        {done}/{tipos.length} liberadas
+      </div>
+      <div
+        style={{
+          height: 4,
+          background: C.faint,
+          borderRadius: 2,
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${(done / tipos.length) * 100}%`,
+            background: C.green,
+            borderRadius: 2,
+          }}
+        />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {tipos.map((t) => {
+          const ok = contrapartidas[t.key];
+          return (
+            <div
+              key={t.key}
+              style={{
+                background: ok ? C.grBg : C.s1,
+                border: `1px solid ${ok ? C.green + "44" : C.faint}`,
+                borderRadius: 6,
+                padding: 16,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: ok ? C.grBg : C.s3,
+                  border: `1px solid ${ok ? C.green : C.faint}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 16,
+                  color: ok ? C.green : C.dim,
+                  flexShrink: 0,
+                }}
+              >
+                {ok ? "✓" : "○"}
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: ok ? C.green : C.text,
+                    marginBottom: 2,
+                  }}
+                >
+                  {t.label}
+                </div>
+                <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
+                {!ok && (
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>
+                    Aguardando confirmação da equipe editorial.
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────────────────
+export default function App() {
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sx2_session");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [tab, setTab] = useState(() => {
+    return localStorage.getItem("sx2_tab") || "painel";
+  });
+
+  const [texts, setTexts] = useState([]);
+  const [contrapartidas, setContrapartidas] = useState({});
+  const [contraExtra, setContraExtraState] = useState({});
+  const [calendar, setCalendar] = useState({});
+  const [calPautas, setCalPautasState] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [ideasStatus, setIdeasStatusState] = useState({});
+  const [ideiasExtra, setIdeiasExtraState] = useState([]);
+  const [passwords, setPasswords] = useState({});
+  const [loaded, setLoaded] = useState(false);
+  const [gsStatus, setGsStatus] = useState("conectando");
+  const [gsTarefas, setGsTarefas] = useState([]);
+
+  useEffect(() => {
+    let isFetching = false;
+
+    const syncWithGoogle = async () => {
+      if (isFetching) return;
+      isFetching = true;
+      setGsStatus("conectando");
+
+      try {
+        const gs = await loadFromGS();
+        if (gs && !gs.error) {
+          if (gs.sx2_texts) setTexts(gs.sx2_texts);
+          if (gs.sx2_contra) setContrapartidas(gs.sx2_contra);
+          if (gs.sx2_contraExtra) setContraExtraState(gs.sx2_contraExtra);
+          if (gs.sx2_cal) setCalendar(gs.sx2_cal);
+          if (gs.sx2_calPautas) setCalPautasState(gs.sx2_calPautas);
+          if (gs.sx2_notif) setNotifications(gs.sx2_notif);
+          if (gs.sx2_ideas) setIdeasStatusState(gs.sx2_ideas);
+          if (gs.sx2_ideiasExtra) setIdeiasExtraState(gs.sx2_ideiasExtra);
+          if (gs.sx2_passwords) setPasswords(gs.sx2_passwords);
+          if (gs.tarefas_planilha) setGsTarefas(gs.tarefas_planilha);
+          setGsStatus("conectado");
+        } else {
+          setGsStatus("offline");
+        }
+      } catch (_) {
+        setGsStatus("offline");
+      }
+      isFetching = false;
+    };
+
+    async function init() {
+      const [t, co, ce, cal, cp, n, i, ie, p] = await Promise.all([
+        load("sx2_texts", []),
+        load("sx2_contra", {}),
+        load("sx2_contraExtra", {}),
+        load("sx2_cal", {}),
+        load("sx2_calPautas", {}),
+        load("sx2_notif", []),
+        load("sx2_ideas", {}),
+        load("sx2_ideiasExtra", []),
+        load("sx2_passwords", {}),
+      ]);
+
+      setTexts(t);
+      setContrapartidas(co);
+      setContraExtraState(ce);
+      setCalendar(cal);
+      setCalPautasState(cp);
+      setNotifications(n);
+      setIdeasStatusState(i);
+      setIdeiasExtraState(ie);
+      setPasswords(p);
+      setLoaded(true);
+
+      setTimeout(syncWithGoogle, 1500);
+    }
+
+    init();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncWithGoogle();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  const addText = useCallback((text) => {
+    const entry = {
+      ...text,
+      id: Date.now(),
+      dataSubmissao: new Date().toLocaleDateString("pt-BR"),
+      status: text.status || "Enviado",
+    };
+    setTexts((prev) => {
+      const n = [...prev, entry];
+      save("sx2_texts", n);
+      return n;
+    });
+    if (!text.status || text.status === "Enviado") {
+      const notif = {
+        id: Date.now() + 1,
+        mensagem: `Novo texto: "${text.titulo}" por ${text.colunistaNome}`,
+        data: new Date().toLocaleDateString("pt-BR"),
+        lida: false,
+      };
+      setNotifications((prev) => {
+        const n = [notif, ...prev];
+        save("sx2_notif", n);
+        return n;
+      });
+    }
+  }, []);
+
+  const updateTextStatus = useCallback((id, status, extra = {}) => {
+    setTexts((prev) => {
+      const n = prev.map((t) => (t.id === id ? { ...t, status, ...extra } : t));
+      save("sx2_texts", n);
+      return n;
+    });
+  }, []);
+
+  const toggleContrapartida = useCallback((colId, tipo) => {
+    setContrapartidas((prev) => {
+      const n = {
+        ...prev,
+        [colId]: { ...prev[colId], [tipo]: !prev[colId]?.[tipo] },
+      };
+      save("sx2_contra", n);
+      return n;
+    });
+  }, []);
+
+  const setContraExtra = useCallback((fn) => {
+    setContraExtraState((prev) => {
+      const n = typeof fn === "function" ? fn(prev) : fn;
+      save("sx2_contraExtra", n);
+      return n;
+    });
+  }, []);
+
+  const toggleCalendar = useCallback((colId, mes) => {
+    setCalendar((prev) => {
+      const cur = prev[colId] || [];
+      const n = {
+        ...prev,
+        [colId]: cur.includes(mes)
+          ? cur.filter((m) => m !== mes)
+          : [...cur, mes],
+      };
+      save("sx2_cal", n);
+      return n;
+    });
+  }, []);
+
+  const setCalPautas = useCallback((v) => {
+    setCalPautasState(v);
+  }, []);
+
+  const setIdeaStatus = useCallback((key, status) => {
+    setIdeasStatusState((prev) => {
+      const n = { ...prev, [key]: status };
+      save("sx2_ideas", n);
+      return n;
+    });
+  }, []);
+
+  const addIdeia = useCallback((idea) => {
+    setIdeiasExtraState((prev) => {
+      const n = [...prev, idea];
+      save("sx2_ideiasExtra", n);
+      return n;
+    });
+  }, []);
+
+  const markNotifRead = useCallback((id) => {
+    setNotifications((prev) => {
+      const n = prev.map((x) => (x.id === id ? { ...x, lida: true } : x));
+      save("sx2_notif", n);
+      return n;
+    });
+  }, []);
+
+  const savePasswords = useCallback((p) => {
+    setPasswords(p);
+    save("sx2_passwords", p);
+  }, []);
+
+  const handleLogin = useCallback((u) => {
+    setUser(u);
+    const startTab = u.role === "gestor" ? "painel" : "enviar";
+    setTab(startTab);
+    localStorage.setItem("sx2_session", JSON.stringify(u));
+    localStorage.setItem("sx2_tab", startTab);
+  }, []);
+
+  if (!loaded)
+    return (
+      <div
+        style={{
+          background: C.bg,
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: C.accent,
+          fontFamily: "monospace",
+          fontSize: 14,
+        }}
+      >
+        carregando...
+      </div>
+    );
+  if (!user)
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        passwords={passwords}
+        savePasswords={savePasswords}
+      />
+    );
+
+  const colunista =
+    user.role === "colunista"
+      ? COLUMNISTS.find((c) => c.id === user.colId)
+      : null;
+  const unread = notifications.filter((n) => !n.lida).length;
+
+  return (
+    <div
+      style={{
+        background: C.bg,
+        minHeight: "100vh",
+        fontFamily: C.fontBase,
+        color: C.text,
+      }}
+    >
+      <NavBar
+        user={user}
+        colunista={colunista}
+        activeTab={tab}
+        setActiveTab={(t) => {
+          setTab(t);
+          localStorage.setItem("sx2_tab", t);
+        }}
+        notifCount={unread}
+        onLogout={() => {
+          setUser(null);
+          localStorage.removeItem("sx2_session");
+          localStorage.removeItem("sx2_tab");
+        }}
+        gsStatus={gsStatus}
+      />
+      {user.role === "gestor" ? (
+        <>
+          {tab === "painel" && (
+            <PainelTab
+              texts={texts}
+              updateTextStatus={updateTextStatus}
+              notifications={notifications}
+              markNotifRead={markNotifRead}
+            />
+          )}
+          {tab === "ideias" && (
+            <IdeiaTab
+              ideasStatus={ideasStatus}
+              setIdeaStatus={setIdeaStatus}
+              addText={addText}
+              gsTarefas={gsTarefas}
+              ideiasExtra={ideiasExtra}
+              addIdeia={addIdeia}
+            />
+          )}
+          {tab === "contrapartidas" && (
+            <ContrapartidasTab
+              contrapartidas={contrapartidas}
+              toggleContrapartida={toggleContrapartida}
+              texts={texts}
+              contraExtra={contraExtra}
+              setContraExtra={setContraExtra}
+            />
+          )}
+          {tab === "calendario" && (
+            <CalendarioTab
+              calendar={calendar}
+              texts={texts}
+              calPautas={calPautas}
+              setCalPautas={setCalPautas}
+            />
+          )}
+          {tab === "colunistas" && (
+            <ColunistasTab texts={texts} contraExtra={contraExtra} />
+          )}
+        </>
+      ) : (
+        <>
+          {tab === "enviar" && (
+            <EnviarTab
+              colunista={colunista}
+              addText={addText}
+              addIdeia={addIdeia}
+            />
+          )}
+          {tab === "meus" && (
+            <MeusTextosTab
+              texts={texts.filter((t) => t.colId === user.colId)}
+            />
+          )}
+          {tab === "calendario" && (
+            <MeuCalendarioTab
+              calendar={calendar[user.colId] || []}
+              toggleCalendar={(mes) => toggleCalendar(user.colId, mes)}
+            />
+          )}
+          {tab === "contrapartidas" && (
+            <MinhasContrapartidasTab
+              contrapartidas={contrapartidas[user.colId] || {}}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}

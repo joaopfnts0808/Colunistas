@@ -1,0 +1,70 @@
+/* 1. Importação das Fontes */
+@font-face {
+  font-family: "Gibson";
+  src: url("/Fonts/gibson-regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Gibson";
+  src: url("/Fonts/gibson-bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Oswald";
+  src: url("/Fonts/Oswald-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Oswald";
+  src: url("/Fonts/Oswald-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* 2. Variáveis de Design */
+:root {
+  --fonte-destaque: "Oswald", sans-serif;
+  --fonte-base: "Gibson", sans-serif;
+}
+
+/* 3. Textos normais e descrições (Gibson Regular) */
+body {
+  font-family: var(--fonte-base);
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+}
+
+/* Mantendo o alinhamento da sua classe .App original */
+.App {
+  text-align: center;
+}
+
+/* 4. Títulos de muito destaque (Oswald Bold) */
+h1,
+h2 {
+  font-family: var(--fonte-destaque);
+  font-weight: 700;
+}
+
+/* Se precisar de um título grande, mas sem ser negrito (Oswald Regular) */
+.titulo-leve {
+  font-family: var(--fonte-destaque);
+  font-weight: 400;
+}
+
+/* 5. Textos de médio destaque (Gibson Bold) */
+h3,
+h4,
+h5,
+strong,
+.destaque-medio {
+  font-family: var(--fonte-base);
+  font-weight: 700;
+}
