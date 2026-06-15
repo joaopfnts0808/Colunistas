@@ -616,9 +616,9 @@ const sbFetch = async (path, options = {}) => {
 const save = async (k, v) => {
   // Cache local imediato
   try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
-  // Supabase como fonte de verdade (upsert)
+  // Supabase: upsert com on_conflict para garantir UPDATE quando a chave já existe
   try {
-    await sbFetch("kv_store", {
+    await sbFetch("kv_store?on_conflict=key", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({ key: k, value: JSON.stringify(v), updated_at: new Date().toISOString() }),
@@ -627,9 +627,9 @@ const save = async (k, v) => {
 };
 
 const load = async (k, d = null) => {
-  // Supabase primeiro
+  // Supabase primeiro — ordena pelo mais recente para ignorar duplicatas antigas
   try {
-    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value`);
+    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value,updated_at&order=updated_at.desc&limit=1`);
     if (rows && rows.length > 0) {
       const v = JSON.parse(rows[0].value);
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
@@ -2447,6 +2447,7 @@ function ContrapartidasTab({
   const [editData, setEditData] = useState({
     foto: "",
     descricao: "",
+    bioLink: "",
     obs: "",
   });
   const tipos = [
