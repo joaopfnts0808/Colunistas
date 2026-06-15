@@ -616,7 +616,7 @@ const sbFetch = async (path, options = {}) => {
 const save = async (k, v) => {
   // Cache local imediato
   try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
-  // Supabase: upsert com on_conflict para garantir UPDATE quando a chave já existe
+  // Supabase como fonte de verdade (upsert)
   try {
     await sbFetch("kv_store?on_conflict=key", {
       method: "POST",
@@ -627,7 +627,7 @@ const save = async (k, v) => {
 };
 
 const load = async (k, d = null) => {
-  // Supabase primeiro — ordena pelo mais recente para ignorar duplicatas antigas
+  // Supabase primeiro
   try {
     const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value,updated_at&order=updated_at.desc&limit=1`);
     if (rows && rows.length > 0) {
@@ -3295,7 +3295,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 }
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
-function EnviarTab({ colunista, addText, addIdeia, contraExtra={} }) {
+function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra }) {
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3335,7 +3335,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={} }) {
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={()=>{}}
+        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
       {sugerirMode ? (
         <>
@@ -3574,7 +3574,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={} }) {
 }
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
-function MeusTextosTab({ texts, colunista, contraExtra={} }) {
+function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
   const pub = texts.filter((t) => t.status === "Publicado").length;
   const pen = texts.filter((t) =>
     ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
@@ -3588,7 +3588,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={} }) {
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={()=>{}}
+        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
       <div
         style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
@@ -4507,11 +4507,16 @@ export default function App() {
               colunista={colunista}
               addText={addText}
               addIdeia={addIdeia}
+              contraExtra={contraExtra}
+              setContraExtra={setContraExtra}
             />
           )}
           {tab === "meus" && (
             <MeusTextosTab
               texts={texts.filter((t) => t.colId === user.colId)}
+              colunista={colunista}
+              contraExtra={contraExtra}
+              setContraExtra={setContraExtra}
             />
           )}
           {tab === "calendario" && (
