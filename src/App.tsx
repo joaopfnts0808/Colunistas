@@ -917,8 +917,8 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
   };
 
   const handleGestor = () => {
-    if (email.trim() === "criacao@ssexbbox.com" && senha === "g3staoss3xbb0x")
-      onLogin({ role: "gestor" });
+    const gestor = GESTORES.find(g => g.email === email.trim() && g.senha === senha);
+    if (gestor) onLogin({ role: "gestor", gestorEmail: gestor.email });
     else showErro("E-mail ou senha incorretos.");
   };
 
@@ -1572,7 +1572,7 @@ function ProfileCard({ nome, pronomes, foto, descricao, bioLink, onEdit, editMod
   );
 }
 
-function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={}, gestorProfile={}, setGestorProfile }) {
+function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={}, gestorProfile={}, setGestorProfile, user }) {
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState(null);
@@ -1619,14 +1619,21 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
 
   return (
     <div style={{ padding: 20 }}>
-      <ProfileCard
-        nome="Equipe Editorial"
-        pronomes={gestorProfile.pronomes||""}
-        foto={gestorProfile.foto||""}
-        descricao={gestorProfile.descricao||""}
-        bioLink={gestorProfile.bioLink||""}
-        onEdit={(d)=>setGestorProfile({...gestorProfile,...d})}
-      />
+      {(()=>{
+        // Busca perfil base do gestor logado + sobrescreve com edições salvas
+        const baseGestor = GESTORES.find(g=>g.email===user?.gestorEmail) || GESTORES[0];
+        const perfil = {...baseGestor, ...gestorProfile};
+        return (
+          <ProfileCard
+            nome={perfil.nome}
+            pronomes={perfil.pronomes}
+            foto={perfil.foto}
+            descricao={perfil.descricao}
+            bioLink={perfil.bioLink}
+            onEdit={(d)=>setGestorProfile({...gestorProfile,...d})}
+          />
+        );
+      })()}
       {unread.length > 0 && (
         <div
           style={{
@@ -4446,6 +4453,7 @@ export default function App() {
               contraExtra={contraExtra}
               gestorProfile={gestorProfile}
               setGestorProfile={setGestorProfile}
+              user={user}
             />
           )}
           {tab === "ideias" && (
@@ -4614,4 +4622,28 @@ export default function App() {
   {id:20084,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo em locais públicos como cartografia do desejo nas cidades",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_0"},
   {id:20085,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo e o ambiente da política brasileira",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-20",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_1"},
   {id:20086,colId:56,colunistaNome:"Lucas Brito",titulo:"Quanto mais sexo, menos sexo: jovens e a recessão sexual",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-07",dataEntrega:"2026-10-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_2"}
+];
+
+
+
+// ── Gestores ─────────────────────────────────────────────────────────────
+const GESTORES = [
+  {
+    email: "criacao@ssexbbox.com",
+    senha: "g3staoss3xbb0x",
+    nome: "João Pedro Fontes",
+    pronomes: "",
+    foto: "",
+    descricao: "",
+    bioLink: "",
+  },
+  {
+    email: "bertucci@ssexbbox.com",
+    senha: "g3staoss3xbb0x",
+    nome: "Lyon Adryan Ror",
+    pronomes: "ILE/DILE ; ELE/DELE",
+    foto: "https://ssexbbox.com/wp-content/uploads/2026/02/PRI-BERTUCCI.jpg",
+    descricao: "Artista social, educadore e pesquisadore da área de diversidade há pelo menos duas décadas",
+    bioLink: "",
+  },
 ];
