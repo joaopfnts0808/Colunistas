@@ -594,56 +594,69 @@ const COLUMNISTS = [
   },
 ];
 
-// ── Storage helpers ──────────────────────────────────────────────────────
-const GS_URL =
-  "https://script.google.com/macros/s/AKfycbxexxCMPdo609Yn8233g8SrR-4NaJXFM6JZQYdfMYJaCqRdjzR-Zg5-peWbrk_pb6M/exec";
+// ── Supabase Storage ─────────────────────────────────────────────────────
+const SUPABASE_URL = "https://otuaojndrwreslvmgqta.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90dWFvam5kcndyZXNsdm1ncXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NzMwMjEsImV4cCI6MjA5NzA0OTAyMX0.DqFszTE4nd6-3TbImOECURrYMk27RIaFtxIHEsDsDTI";
+
+const sbFetch = async (path, options = {}) => {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...(options.headers || {}),
+    },
+  });
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
 
 const save = async (k, v) => {
+  // Cache local imediato
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
+  // Supabase como fonte de verdade (upsert)
   try {
-    await window.storage.set(k, JSON.stringify(v));
-  } catch (_) {}
-  try {
-    fetch(GS_URL, {
+    await sbFetch("kv_store", {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ key: k, data: v }),
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({ key: k, value: JSON.stringify(v), updated_at: new Date().toISOString() }),
     });
   } catch (_) {}
 };
 
 const load = async (k, d = null) => {
+  // Supabase primeiro
   try {
-    const r = await window.storage.get(k);
-    return r ? JSON.parse(r.value) : d;
-  } catch (_) {
-    return d;
-  }
+    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value`);
+    if (rows && rows.length > 0) {
+      const v = JSON.parse(rows[0].value);
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
+      return v;
+    }
+  } catch (_) {}
+  // Fallback: localStorage
+  try {
+    const lv = localStorage.getItem(k);
+    if (lv !== null) return JSON.parse(lv);
+  } catch (_) {}
+  return d;
 };
 
-const loadFromGS = () =>
-  new Promise((resolve) => {
-    const cbName = "gsCallback_" + Date.now();
-    const script = document.createElement("script");
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      document.body.removeChild(script);
-      resolve(null);
-    }, 12000);
-    window[cbName] = (data) => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src =
-      GS_URL + "?action=getData&callback=" + cbName + "&t=" + Date.now();
-    script.onerror = () => {
-      clearTimeout(timeout);
-      resolve(null);
-    };
-    document.body.appendChild(script);
-  });
+const loadAll = async () => {
+  try {
+    const rows = await sbFetch("kv_store?select=key,value");
+    if (!rows || rows.length === 0) return null;
+    const data = {};
+    rows.forEach((r) => {
+      try { data[r.key] = JSON.parse(r.value); } catch (_) {}
+    });
+    return data;
+  } catch (_) {
+    return null;
+  }
+};
 
 // ── Tiny UI primitives ──────────────────────────────────────────────────
 const Label = ({ c = C.muted, ...p }) => (
@@ -4029,27 +4042,27 @@ export default function App() {
   useEffect(() => {
     let isFetching = false;
 
-    const syncWithGoogle = async () => {
+    const syncWithSupabase = async () => {
       if (isFetching) return;
       isFetching = true;
       setGsStatus("conectando");
 
       try {
-        const gs = await loadFromGS();
-        if (gs && !gs.error) {
-          if (gs.sx2_texts) setTexts(gs.sx2_texts);
-          if (gs.sx2_contra) setContrapartidas(gs.sx2_contra);
-          if (gs.sx2_contraExtra) setContraExtraState(gs.sx2_contraExtra);
-          if (gs.sx2_cal) setCalendar(gs.sx2_cal);
-          if (gs.sx2_calPautas) setCalPautasState(gs.sx2_calPautas);
-          if (gs.sx2_notif) setNotifications(gs.sx2_notif);
-          if (gs.sx2_ideas) setIdeasStatusState(gs.sx2_ideas);
-          if (gs.sx2_ideiasExtra) setIdeiasExtraState(gs.sx2_ideiasExtra);
-          if (gs.sx2_passwords) setPasswords(gs.sx2_passwords);
-          if (gs.tarefas_planilha) setGsTarefas(gs.tarefas_planilha);
-          if (gs.sx2_leituras) setLeiturasState(gs.sx2_leituras);
-          if (gs.sx2_trilha) setTrilhaState(gs.sx2_trilha);
-          if (gs.sx2_briefings) setBriefingsState(gs.sx2_briefings);
+        const data = await loadAll();
+        if (data) {
+          // Supabase é confiável — usa diretamente sem merge complexo
+          if (data.sx2_texts) setTexts(data.sx2_texts);
+          if (data.sx2_contra) setContrapartidas(data.sx2_contra);
+          if (data.sx2_contraExtra) setContraExtraState(data.sx2_contraExtra);
+          if (data.sx2_cal) setCalendar(data.sx2_cal);
+          if (data.sx2_calPautas) setCalPautasState(data.sx2_calPautas);
+          if (data.sx2_notif) setNotifications(data.sx2_notif);
+          if (data.sx2_ideas) setIdeasStatusState(data.sx2_ideas);
+          if (data.sx2_ideiasExtra) setIdeiasExtraState(data.sx2_ideiasExtra);
+          if (data.sx2_passwords) setPasswords(data.sx2_passwords);
+          if (data.sx2_leituras) setLeiturasState(data.sx2_leituras);
+          if (data.sx2_trilha) setTrilhaState(data.sx2_trilha);
+          if (data.sx2_briefings) setBriefingsState(data.sx2_briefings);
           setGsStatus("conectado");
         } else {
           setGsStatus("offline");
@@ -4101,14 +4114,14 @@ export default function App() {
       setBriefingsState(br);
       setLoaded(true);
 
-      setTimeout(syncWithGoogle, 1500);
+      setTimeout(syncWithSupabase, 500);
     }
 
     init();
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        syncWithGoogle();
+        syncWithSupabase();
       }
     };
 
