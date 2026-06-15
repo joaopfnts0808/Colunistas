@@ -1882,24 +1882,26 @@ function IdeiaTab({
   const [editIdeiaData, setEditIdeiaData] = useState({});
 
   const openEditIdeia = (idea) => {
-    // Busca o texto correspondente a esta tarefa
-    const texto = texts.find(t => t.titulo === idea.pauta && t.colId === idea.colId);
+    // Busca por key (mais confiável que título — títulos podem ter diferenças sutis)
+    const texto = texts.find(t => t.key === idea.key) ||
+                  texts.find(t => t.colId === idea.colId && t.titulo === idea.pauta);
     setEditIdeiaData({
-      titulo: idea.pauta,
-      editoria: idea.editoria,
+      titulo: texto?.titulo || idea.pauta,
+      editoria: texto?.editoria || idea.editoria,
       dataEntrega: texto?.dataEntrega || texto?.prazo || "",
       dataPublicacao: texto?.dataPublicacao || "",
       briefing: texto?.briefing || idea.esboco || "",
       link: texto?.link || "",
       status: texto?.status || "Pendente",
-      _textoId: texto?.id || null,
+      _textoId: texto?.id ?? null,
     });
     setEditIdeia(idea);
   };
 
   const saveEditIdeia = () => {
-    if(editIdeiaData._textoId) {
-      updateTextStatus(editIdeiaData._textoId, editIdeiaData.status, {
+    const id = editIdeiaData._textoId;
+    if(id !== null && id !== undefined) {
+      updateTextStatus(Number(id), editIdeiaData.status, {
         titulo: editIdeiaData.titulo,
         editoria: editIdeiaData.editoria,
         dataEntrega: editIdeiaData.dataEntrega,
