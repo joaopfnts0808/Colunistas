@@ -1492,7 +1492,87 @@ function StatCard({ label, value, color = C.text, sub }) {
 }
 
 // ── GESTOR: Painel ──────────────────────────────────────────────────────
-function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={} }) {
+
+// ── ProfileCard ─────────────────────────────────────────────────────────
+function ProfileCard({ nome, pronomes, foto, descricao, bioLink, onEdit, editMode=false, editData, setEditData, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({foto:"",descricao:"",bioLink:"",pronomes:""});
+
+  const startEdit = () => {
+    setDraft({foto:foto||"",descricao:descricao||"",bioLink:bioLink||"",pronomes:pronomes||""});
+    setEditing(true);
+  };
+
+  const saveEdit = () => {
+    onEdit(draft);
+    setEditing(false);
+  };
+
+  const firstName = nome?.split(" ")[0] || nome;
+
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:10,padding:"20px 24px",marginBottom:20,display:"flex",gap:20,alignItems:"flex-start",position:"relative"}}>
+      {/* Photo */}
+      <div style={{width:80,height:80,borderRadius:"50%",background:C.s2,border:`2px solid ${C.accent}44`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {foto
+          ?<img src={foto} alt={nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
+          :<span style={{fontSize:24,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
+        }
+      </div>
+      {/* Info */}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,color:C.accent,marginBottom:2}}>Oi, {firstName}! 👋</div>
+        <div style={{fontSize:20,fontWeight:700,fontFamily:C.fontDestaque,color:C.text,marginBottom:2}}>{nome}</div>
+        {pronomes&&<div style={{fontSize:12,color:C.dim,marginBottom:6}}>{pronomes}</div>}
+        {descricao&&<div style={{fontSize:13,color:C.muted,marginBottom:6}}>{descricao}</div>}
+        {bioLink&&(
+          bioLink.startsWith("http")
+            ?<a href={bioLink} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>{bioLink}</a>
+            :<div style={{fontSize:12,color:C.muted,fontStyle:"italic"}}>{bioLink.slice(0,200)}{bioLink.length>200?"...":""}</div>
+        )}
+      </div>
+      {/* Edit button */}
+      <button onClick={startEdit} style={{background:"none",border:`1px solid ${C.faint}`,color:C.dim,borderRadius:4,cursor:"pointer",fontSize:11,padding:"4px 10px",flexShrink:0}}>✎ Editar perfil</button>
+
+      {/* Edit modal */}
+      {editing&&(
+        <Modal title="Editar Perfil" onClose={()=>setEditing(false)} width={560}>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{display:"flex",gap:14,alignItems:"center"}}>
+              <div style={{width:70,height:70,borderRadius:"50%",background:C.s2,border:`1px solid ${C.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {draft.foto
+                  ?<img src={draft.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  :<span style={{fontSize:20,fontWeight:700,color:C.accent}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
+                }
+              </div>
+              <div style={{flex:1}}><Label>URL da Foto (300×300)</Label>
+                <Input value={draft.foto} onChange={v=>setDraft(d=>({...d,foto:v}))} placeholder="https://..."/>
+              </div>
+            </div>
+            <div><Label>Pronomes</Label>
+              <Input value={draft.pronomes} onChange={v=>setDraft(d=>({...d,pronomes:v}))} placeholder="Ex: ela/dela, ele/dele, elu/delu"/>
+            </div>
+            <div>
+              <Label>Descrição curta (até 100 caracteres)</Label>
+              <Input value={draft.descricao} onChange={v=>setDraft(d=>({...d,descricao:v.slice(0,100)}))} placeholder="Uma frase sobre você..."/>
+              <div style={{fontSize:10,color:C.dim,marginTop:3,textAlign:"right"}}>{(draft.descricao||"").length}/100</div>
+            </div>
+            <div>
+              <Label>Link de bio ou apresentação (até 1000 caracteres)</Label>
+              <textarea value={draft.bioLink} onChange={e=>setDraft(d=>({...d,bioLink:e.target.value.slice(0,1000)}))}
+                placeholder="https://... ou texto de apresentação completa"
+                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+              <div style={{fontSize:10,color:C.dim,marginTop:3,textAlign:"right"}}>{(draft.bioLink||"").length}/1000</div>
+            </div>
+            <Btn variant="primary" onClick={saveEdit}>Salvar perfil</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={}, gestorProfile={}, setGestorProfile }) {
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState(null);
@@ -1539,6 +1619,14 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
 
   return (
     <div style={{ padding: 20 }}>
+      <ProfileCard
+        nome="Equipe Editorial"
+        pronomes={gestorProfile.pronomes||""}
+        foto={gestorProfile.foto||""}
+        descricao={gestorProfile.descricao||""}
+        bioLink={gestorProfile.bioLink||""}
+        onEdit={(d)=>setGestorProfile({...gestorProfile,...d})}
+      />
       {unread.length > 0 && (
         <div
           style={{
@@ -3199,7 +3287,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 }
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
-function EnviarTab({ colunista, addText, addIdeia }) {
+function EnviarTab({ colunista, addText, addIdeia, contraExtra={} }) {
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3230,9 +3318,18 @@ function EnviarTab({ colunista, addText, addIdeia }) {
     setTimeout(() => setSent(false), 3000);
   };
 
+    const colExtra = (contraExtra||{})[colunista?.id] || {};
   return (
-    <div style={{ padding: 20, maxWidth: 600 }}>
-      {!sugerirMode ? (
+    <div style={{padding:20}}>
+      <ProfileCard
+        nome={colunista?.nome||""}
+        pronomes={colunista?.pronomes||""}
+        foto={colExtra.foto||""}
+        descricao={colExtra.descricao||""}
+        bioLink={colExtra.bioLink||""}
+        onEdit={()=>{}}
+      />
+      {sugerirMode ? (
         <>
           <div
             style={{
@@ -3469,13 +3566,22 @@ function EnviarTab({ colunista, addText, addIdeia }) {
 }
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
-function MeusTextosTab({ texts }) {
+function MeusTextosTab({ texts, colunista, contraExtra={} }) {
   const pub = texts.filter((t) => t.status === "Publicado").length;
   const pen = texts.filter((t) =>
     ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
   ).length;
+  const colExtra = (contraExtra||{})[colunista?.id] || {};
   return (
     <div style={{ padding: 20 }}>
+      <ProfileCard
+        nome={colunista?.nome||""}
+        pronomes={colunista?.pronomes||""}
+        foto={colExtra.foto||""}
+        descricao={colExtra.descricao||""}
+        bioLink={colExtra.bioLink||""}
+        onEdit={()=>{}}
+      />
       <div
         style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
       >
@@ -4035,6 +4141,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [gsStatus, setGsStatus] = useState("conectando");
   const [gsTarefas, setGsTarefas] = useState([]);
+  const [gestorProfile, setGestorProfileState] = useState({foto:"",descricao:"",bioLink:"",pronomes:""});
   const [leituras, setLeiturasState] = useState([]);
   const [trilha, setTrilhaState] = useState([]);
   const [briefings, setBriefingsState] = useState([]);
@@ -4060,6 +4167,7 @@ export default function App() {
           if (data.sx2_ideas) setIdeasStatusState(data.sx2_ideas);
           if (data.sx2_ideiasExtra) setIdeiasExtraState(data.sx2_ideiasExtra);
           if (data.sx2_passwords) setPasswords(data.sx2_passwords);
+          if (data.sx2_gestorProfile) setGestorProfileState(data.sx2_gestorProfile);
           if (data.sx2_leituras) setLeiturasState(data.sx2_leituras);
           if (data.sx2_trilha) setTrilhaState(data.sx2_trilha);
           if (data.sx2_briefings) setBriefingsState(data.sx2_briefings);
@@ -4087,6 +4195,7 @@ export default function App() {
         load("sx2_leituras", []),
         load("sx2_trilha", []),
         load("sx2_briefings", []),
+        load("sx2_gestorProfile", {foto:"",descricao:"",bioLink:"",pronomes:""}),
       ]);
 
       // Seed histórico de publicações: Matheus e Moon Kenzo já têm 1 publicado
@@ -4232,6 +4341,11 @@ export default function App() {
     save("sx2_passwords", p);
   }, []);
 
+  const setGestorProfile = useCallback((data) => {
+    setGestorProfileState(data);
+    save("sx2_gestorProfile", data);
+  }, []);
+
   const setLeituras = useCallback((fn) => {
     setLeiturasState((prev) => {
       const n = typeof fn === "function" ? fn(prev) : fn;
@@ -4330,6 +4444,8 @@ export default function App() {
               notifications={notifications}
               markNotifRead={markNotifRead}
               contraExtra={contraExtra}
+              gestorProfile={gestorProfile}
+              setGestorProfile={setGestorProfile}
             />
           )}
           {tab === "ideias" && (
