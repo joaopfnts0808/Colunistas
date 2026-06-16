@@ -2050,7 +2050,7 @@ function IdeiaTab({
         sigla: col.sigla,
         editoria: col.editorias[0] || "",
         pauta: p,
-        status: ideasStatus[key] || "disponível",
+        status: texts.some(t=>t.key===key) ? "em tarefa" : (ideasStatus[key] || "disponível"),
       };
     })
   ).concat(
@@ -3298,7 +3298,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 }
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
-function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[] }) {
+function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[], updateTextStatus }) {
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3332,6 +3332,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
     const colExtra = (contraExtra||{})[colunista?.id] || {};
   const myTexts = texts.filter(t=>t.colId===colunista?.id);
   const [expandedId, setExpandedId] = useState(null);
+  const [linkEdit, setLinkEdit] = useState({});
   return (
     <div style={{padding:20}}>
       <ProfileCard
@@ -3367,7 +3368,25 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                       </div>
                       {t.briefing&&<div style={{fontSize:12,color:C.muted,background:C.s2,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.accent,fontWeight:600}}>Briefing: </span>{t.briefing}</div>}
                       {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
-                      {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <input
+                          value={linkEdit[t.id]??t.link??""}
+                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                          onClick={e=>e.stopPropagation()}
+                          placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                          style={{flex:1,background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                        />
+                        <button
+                          onClick={e=>{
+                            e.stopPropagation();
+                            const newLink=linkEdit[t.id]??"";
+                            if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                            setLinkEdit(p=>({...p,[t.id]:undefined}));
+                          }}
+                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                        >Salvar</button>
+                      </div>
+                      {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
                     </div>
                   )}
                 </div>
@@ -3613,8 +3632,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
 }
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
-function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
+function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updateTextStatus }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [linkEdit, setLinkEdit] = useState({});
   const pub = texts.filter((t) => t.status === "Publicado").length;
   const pen = texts.filter((t) =>
     ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
@@ -3706,14 +3726,32 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
                       </div>
                     )}
                     {t.dataPublicacao&&<div style={{fontSize:11,color:C.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
-                    {t.link && (
+                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <input
+                        value={linkEdit[t.id]??t.link??""}
+                        onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                        onClick={e=>e.stopPropagation()}
+                        placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                        style={{flex:1,background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                      />
+                      <button
+                        onClick={e=>{
+                          e.stopPropagation();
+                          const newLink=linkEdit[t.id]??"";
+                          if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                          setLinkEdit(p=>({...p,[t.id]:undefined}));
+                        }}
+                        style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                      >Salvar</button>
+                    </div>
+                    {t.link&&(linkEdit[t.id]===undefined)&&(
                       <a href={t.link} target="_blank" rel="noreferrer"
                         style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
                         onClick={e=>e.stopPropagation()}>
                         {t.link}
                       </a>
                     )}
-                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
                   </div>
                 )}
               </div>
@@ -4546,6 +4584,7 @@ export default function App() {
               texts={texts}
               contraExtra={contraExtra}
               setContraExtra={setContraExtra}
+              updateTextStatus={updateTextStatus}
             />
           )}
           {tab === "meus" && (
@@ -4554,6 +4593,7 @@ export default function App() {
               colunista={colunista}
               contraExtra={contraExtra}
               setContraExtra={setContraExtra}
+              updateTextStatus={updateTextStatus}
             />
           )}
           {tab === "calendario" && (
