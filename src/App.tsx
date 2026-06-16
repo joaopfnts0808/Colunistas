@@ -1801,8 +1801,10 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                         fontStyle: "italic",
                       }}
                     >
-                      Briefing: {t.briefing.slice(0, 60)}
-                      {t.briefing.length > 60 ? "..." : ""}
+                      {t.briefing.startsWith("http") ? "Briefing: " : "Briefing: "}
+                      {t.briefing.startsWith("http")
+                        ? t.briefing.slice(0, 50) + (t.briefing.length > 50 ? "..." : "")
+                        : t.briefing.slice(0, 60) + (t.briefing.length > 60 ? "..." : "")}
                     </div>
                   )}
                 </div>
@@ -1888,27 +1890,12 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
             >
               <Label c={C.accent}>Editar Tarefa</Label>
               <div>
-                <Label>Briefing / Instruções</Label>
+                <Label>Briefing</Label>
                 <textarea
                   value={editField.briefing}
-                  onChange={(e) =>
-                    setEditField((f) => ({ ...f, briefing: e.target.value }))
-                  }
-                  placeholder="Adicione briefing, instruções editoriais, contexto..."
-                  style={{
-                    width: "100%",
-                    background: C.s1,
-                    border: `1px solid ${C.b}`,
-                    color: C.text,
-                    padding: "9px 12px",
-                    borderRadius: 4,
-                    fontSize: 13,
-                    minHeight: 80,
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
+                  onChange={(e) => setEditField((f) => ({ ...f, briefing: e.target.value }))}
+                  placeholder="Link, instruções ou contexto para o colunista..."
+                  style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
                 />
               </div>
               <div style={{ display: "flex", gap: 10 }}>
@@ -3360,33 +3347,57 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                     </div>
                   </div>
                   {open&&(
-                    <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
                       <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
                         <span style={{fontSize:11,color:C.dim}}>{t.editoria}</span>
                         {t.dataEntrega&&<span style={{fontSize:11,color:C.dim}}>Entrega: {t.dataEntrega}</span>}
                         {t.dataPublicacao&&<span style={{fontSize:11,color:C.dim}}>Publicação: {t.dataPublicacao}</span>}
                       </div>
-                      {t.briefing&&<div style={{fontSize:12,color:C.muted,background:C.s2,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.accent,fontWeight:600}}>Briefing: </span>{t.briefing}</div>}
-                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
-                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <input
-                          value={linkEdit[t.id]??t.link??""}
-                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        <Label>Briefing</Label>
+                        <textarea
+                          value={linkEdit[`brief_${t.id}`]??t.briefing??""}
+                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
                           onClick={e=>e.stopPropagation()}
-                          placeholder="Cole o link do seu texto (Google Docs, Drive...)"
-                          style={{flex:1,background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                          placeholder="Link, instruções ou contexto..."
+                          style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
                         />
-                        <button
-                          onClick={e=>{
-                            e.stopPropagation();
-                            const newLink=linkEdit[t.id]??"";
-                            if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
-                            setLinkEdit(p=>({...p,[t.id]:undefined}));
-                          }}
-                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
-                        >Salvar</button>
+                        <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
                       </div>
-                      {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
+                      <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <input
+                            value={linkEdit[t.id]??t.link??""}
+                            onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                            onClick={e=>e.stopPropagation()}
+                            placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                            style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                          />
+                          <button
+                            onClick={e=>{
+                              e.stopPropagation();
+                              const newLink=linkEdit[t.id]??"";
+                              if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                              setLinkEdit(p=>({...p,[t.id]:undefined}));
+                            }}
+                            style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                          >Salvar link</button>
+                        </div>
+                        {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                          {[{s:"Pendente",label:"Pendente"},{s:"Enviado",label:"Texto entregue"},{s:"Publicado",label:"Publicado"}].map(({s,label})=>{
+                            const cfg=STATUS_CFG[s]||{};
+                            const active=t.status===s;
+                            return(
+                              <button key={s}
+                                onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
+                                style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                              >{label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -3719,39 +3730,59 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                 </div>
                 </div>
                 {open && (
-                  <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
-                    {t.briefing && (
-                      <div style={{fontSize:12,color:C.muted,background:C.s2,borderRadius:4,padding:"8px 10px"}}>
-                        <span style={{color:C.accent,fontWeight:600}}>Briefing: </span>{t.briefing}
-                      </div>
-                    )}
+                  <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      <Label>Briefing</Label>
+                      <textarea
+                        value={linkEdit[`brief_${t.id}`]??t.briefing??""}
+                        onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
+                        onClick={e=>e.stopPropagation()}
+                        placeholder="Link, instruções ou contexto..."
+                        style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
+                      />
+                      <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                    </div>
                     {t.dataPublicacao&&<div style={{fontSize:11,color:C.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
                     {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
-                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                      <input
-                        value={linkEdit[t.id]??t.link??""}
-                        onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
-                        onClick={e=>e.stopPropagation()}
-                        placeholder="Cole o link do seu texto (Google Docs, Drive...)"
-                        style={{flex:1,background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
-                      />
-                      <button
-                        onClick={e=>{
-                          e.stopPropagation();
-                          const newLink=linkEdit[t.id]??"";
-                          if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
-                          setLinkEdit(p=>({...p,[t.id]:undefined}));
-                        }}
-                        style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
-                      >Salvar</button>
+                    <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <input
+                          value={linkEdit[t.id]??t.link??""}
+                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                          onClick={e=>e.stopPropagation()}
+                          placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                          style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                        />
+                        <button
+                          onClick={e=>{
+                            e.stopPropagation();
+                            const newLink=linkEdit[t.id]??"";
+                            if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                            setLinkEdit(p=>({...p,[t.id]:undefined}));
+                          }}
+                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                        >Salvar link</button>
+                      </div>
+                      {t.link&&(linkEdit[t.id]===undefined)&&(
+                        <a href={t.link} target="_blank" rel="noreferrer"
+                          style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
+                          onClick={e=>e.stopPropagation()}>
+                          {t.link}
+                        </a>
+                      )}
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        {[{s:"Pendente",label:"Pendente"},{s:"Enviado",label:"Texto entregue"},{s:"Publicado",label:"Publicado"}].map(({s,label})=>{
+                          const cfg=STATUS_CFG[s]||{};
+                          const active=t.status===s;
+                          return(
+                            <button key={s}
+                              onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
+                              style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                            >{label}</button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    {t.link&&(linkEdit[t.id]===undefined)&&(
-                      <a href={t.link} target="_blank" rel="noreferrer"
-                        style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
-                        onClick={e=>e.stopPropagation()}>
-                        {t.link}
-                      </a>
-                    )}
                   </div>
                 )}
               </div>
