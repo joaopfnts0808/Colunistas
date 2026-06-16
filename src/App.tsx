@@ -646,6 +646,473 @@ const COLUMNISTS = [
   },
 ];
 
+
+// ── Chat System ───────────────────────────────────────────────────────────
+
+const getChatUserId = (user) =>
+  user.role === "gestor" ? `gestor_${user.email}` : `col_${user.colId}`;
+
+const getChatUserName = (user, colunista, gestorProfile) => {
+  if (user.role === "colunista") return colunista?.nome || "Colunista";
+  const g = GESTORES.find(g => g.email === user.email);
+  return g?.nome || gestorProfile?.nome || "Gestor";
+};
+
+const getChatUserSigla = (user, colunista) => {
+  if (user.role === "colunista") return colunista?.sigla || "??";
+  const g = GESTORES.find(g => g.email === user.email);
+  return g?.nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "G";
+};
+
+const getChatUserFoto = (user, colunista, contraExtra, gestorProfile) => {
+  if (user.role === "colunista") return contraExtra?.[user.colId]?.foto || "";
+  const g = GESTORES.find(g => g.email === user.email);
+  return g?.foto || gestorProfile?.foto || "";
+};
+
+const dmChannelKey = (a, b) => {
+  const s = [a, b].sort();
+  return `sx2_dm_${s[0]}_${s[1]}`;
+};
+
+const playNotifSound = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.setValueAtTime(1200, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch(_) {}
+};
+
+const buildAllChatUsers = (contraExtra) => {
+  const users = [];
+  GESTORES.forEach((g) => {
+    users.push({
+      id: `gestor_${g.email}`,
+      nome: g.nome,
+      sigla: g.nome.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(),
+      foto: g.foto || "",
+    });
+  });
+  COLUMNISTS.forEach((c) => {
+    users.push({
+      id: `col_${c.id}`,
+      nome: c.nome,
+      sigla: c.sigla,
+      foto: contraExtra?.[c.id]?.foto || "",
+    });
+  });
+  return users;
+};
+
+// ── ChatFloat ─────────────────────────────────────────────────────────────
+function ChatFloat({ user, colunista, gestorProfile, contraExtra }) {
+  const cs = useC();
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState("global"); // "global" | "dms" | userId
+  const [msgs, setMsgs] = useState({});       // { channelKey: [msg] }
+  const [input, setInput] = useState("");
+  const [presence, setPresence] = useState({});
+  const [unread, setUnread] = useState({});
+  const endRef = useRef(null);
+  const pollRef = useRef(null);
+  const hbRef = useRef(null);
+  const openRef = useRef(open);
+  const viewRef = useRef(view);
+  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { viewRef.current = view; }, [view]);
+
+  const myId   = getChatUserId(user);
+  const myName = getChatUserName(user, colunista, gestorProfile);
+  const mySig  = getChatUserSigla(user, colunista);
+  const myFoto = getChatUserFoto(user, colunista, contraExtra, gestorProfile);
+
+  const curKey = view === "global"
+    ? "sx2_chat_global"
+    : view === "dms" ? null
+    : dmChannelKey(myId, view);
+
+  const curMsgs = curKey ? (msgs[curKey] || []) : [];
+  const allUsers = buildAllChatUsers(contraExtra).filter(u => u.id !== myId);
+
+  const totalUnread = Object.values(unread).reduce((a,b)=>a+b, 0);
+
+  const isOnline = (uid) => {
+    const last = presence[uid];
+    return last && (Date.now() - last < 90000);
+  };
+
+  const loadChannel = async (key, silent = false) => {
+    try {
+      const data = await sbFetch(`kv_store?key=eq.${encodeURIComponent(key)}&select=value`);
+      const fetched = data?.[0]?.value ? JSON.parse(data[0].value) : [];
+      setMsgs(prev => {
+        const old = prev[key] || [];
+        if (!silent && fetched.length > old.length && old.length > 0) {
+          const newOnes = fetched.slice(old.length).filter(m => m.fromId !== myId);
+          if (newOnes.length > 0) {
+            playNotifSound();
+            const isActive = openRef.current && viewRef.current !== "dms" &&
+              (viewRef.current === "global" ? key === "sx2_chat_global" : dmChannelKey(myId, viewRef.current) === key);
+            if (!isActive) {
+              setUnread(u => ({...u, [key]: (u[key]||0) + newOnes.length}));
+            }
+          }
+        }
+        return {...prev, [key]: fetched};
+      });
+    } catch(_) {}
+  };
+
+  const loadPresence = async () => {
+    try {
+      const data = await sbFetch(`kv_store?key=eq.sx2_presence&select=value`);
+      if (data?.[0]?.value) setPresence(JSON.parse(data[0].value));
+    } catch(_) {}
+  };
+
+  const heartbeat = async () => {
+    try {
+      const data = await sbFetch(`kv_store?key=eq.sx2_presence&select=value`);
+      const current = data?.[0]?.value ? JSON.parse(data[0].value) : {};
+      current[myId] = Date.now();
+      await sbFetch("kv_store", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ key: "sx2_presence", value: JSON.stringify(current), updated_at: new Date().toISOString() }),
+      });
+      setPresence(current);
+    } catch(_) {}
+  };
+
+  useEffect(() => {
+    loadChannel("sx2_chat_global", true);
+    loadPresence();
+    heartbeat();
+
+    const poll = () => {
+      loadChannel("sx2_chat_global");
+      loadPresence();
+      const v = viewRef.current;
+      if (v !== "global" && v !== "dms") {
+        loadChannel(dmChannelKey(myId, v));
+      }
+    };
+
+    pollRef.current = setInterval(poll, 3000);
+    hbRef.current   = setInterval(heartbeat, 30000);
+
+    return () => {
+      clearInterval(pollRef.current);
+      clearInterval(hbRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view !== "global" && view !== "dms") {
+      loadChannel(dmChannelKey(myId, view), true);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (open && curKey) {
+      setUnread(u => ({...u, [curKey]: 0}));
+    }
+  }, [open, curKey]);
+
+  useEffect(() => {
+    if (open && endRef.current) {
+      endRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [curMsgs, open, view]);
+
+  const sendMsg = async () => {
+    const text = input.trim();
+    if (!text || !curKey) return;
+    setInput("");
+    const msg = {
+      id: Date.now(),
+      fromId: myId,
+      fromName: myName,
+      fromSig: mySig,
+      fromFoto: myFoto,
+      text,
+      ts: new Date().toISOString(),
+    };
+    const updated = [...(msgs[curKey]||[]), msg].slice(-100);
+    setMsgs(prev => ({...prev, [curKey]: updated}));
+    try {
+      await sbFetch("kv_store", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ key: curKey, value: JSON.stringify(updated), updated_at: new Date().toISOString() }),
+      });
+    } catch(_) {}
+  };
+
+  const fmtTime = (ts) => {
+    const d = new Date(ts);
+    return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+  };
+
+  const dmUnreadTotal = Object.entries(unread)
+    .filter(([k]) => k !== "sx2_chat_global")
+    .reduce((a,[,v])=>a+v, 0);
+
+  return (
+    <>
+      {/* ── Floating button ── */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="Chat"
+        style={{
+          position:"fixed", bottom:24, right:24,
+          width:52, height:52, borderRadius:"50%",
+          background: GRADIENT,
+          border:"none", cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:22, boxShadow:"0 4px 24px rgba(0,0,0,0.45)",
+          zIndex:300, transition:"transform 0.15s",
+        }}
+        onMouseEnter={e=>e.currentTarget.style.transform="scale(1.08)"}
+        onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+      >
+        💬
+        {totalUnread > 0 && (
+          <span style={{
+            position:"absolute", top:-4, right:-4,
+            background:"#ff575b", color:"#fff",
+            borderRadius:"50%", fontSize:9, fontWeight:700,
+            width:18, height:18, display:"flex",
+            alignItems:"center", justifyContent:"center",
+            border:"2px solid #000",
+          }}>{totalUnread > 9 ? "9+" : totalUnread}</span>
+        )}
+      </button>
+
+      {/* ── Chat panel ── */}
+      {open && (
+        <div style={{
+          position:"fixed", bottom:84, right:24,
+          width:360, height:500,
+          background:cs.s1,
+          border:`1px solid ${cs.b}`,
+          borderRadius:12,
+          display:"flex", flexDirection:"column",
+          zIndex:299,
+          boxShadow:"0 8px 40px rgba(0,0,0,0.5)",
+          overflow:"hidden",
+        }}>
+          {/* rainbow stripe */}
+          <div style={{height:4, background:GRADIENT, flexShrink:0}} />
+
+          {/* Tab bar */}
+          <div style={{display:"flex", borderBottom:`1px solid ${cs.faint}`, flexShrink:0, background:cs.s2}}>
+            {[
+              {key:"global", label:"🌐 Global", badge: unread["sx2_chat_global"]||0},
+              {key:"dms",    label:"💬 DMs",    badge: dmUnreadTotal},
+            ].map(t => (
+              <button key={t.key} onClick={()=>setView(t.key)}
+                style={{
+                  background:"none", border:"none",
+                  color: (view === t.key || (t.key==="dms" && view!=="global")) ? cs.text : cs.dim,
+                  padding:"10px 14px", cursor:"pointer",
+                  fontSize:12, fontFamily:"inherit",
+                  fontWeight: (view === t.key || (t.key==="dms" && view!=="global")) ? 700 : 400,
+                  borderBottom: (view === t.key || (t.key==="dms" && view!=="global"))
+                    ? `2px solid ${cs.accent}` : "2px solid transparent",
+                }}>
+                {t.label}
+                {t.badge > 0 && (
+                  <span style={{marginLeft:4, background:cs.accent, color:"#fff",
+                    borderRadius:8, fontSize:9, padding:"1px 5px", fontWeight:700}}>
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Body */}
+          {view === "dms" ? (
+            /* DM user list */
+            <div style={{flex:1, overflow:"auto"}}>
+              {allUsers.map(u => {
+                const k = dmChannelKey(myId, u.id);
+                const badge = unread[k] || 0;
+                const online = isOnline(u.id);
+                return (
+                  <button key={u.id} onClick={()=>setView(u.id)}
+                    style={{
+                      width:"100%", background:"none", border:"none",
+                      color:cs.text, padding:"9px 14px",
+                      cursor:"pointer", display:"flex", alignItems:"center",
+                      gap:10, textAlign:"left", fontFamily:"inherit",
+                      borderBottom:`1px solid ${cs.faint}`,
+                    }}>
+                    <div style={{position:"relative", flexShrink:0}}>
+                      {u.foto
+                        ? <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden"}}>
+                            <img src={u.foto} alt={u.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}
+                              onError={e=>e.target.style.display="none"}/>
+                          </div>
+                        : <div style={{width:34,height:34,borderRadius:"50%",background:cs.acBg,
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            fontSize:11,fontWeight:700,color:cs.accent}}>{u.sigla}</div>
+                      }
+                      <span style={{
+                        position:"absolute", bottom:0, right:0,
+                        width:10, height:10, borderRadius:"50%",
+                        background: online ? "#00ff6e" : cs.dim,
+                        border:`2px solid ${cs.s1}`,
+                      }}/>
+                    </div>
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{fontSize:12, fontWeight:600}}>{u.nome}</div>
+                      <div style={{fontSize:10, color: online ? cs.green : cs.dim}}>
+                        {online ? "● online" : "offline"}
+                      </div>
+                    </div>
+                    {badge > 0 && (
+                      <span style={{background:cs.accent, color:"#fff",
+                        borderRadius:8, fontSize:9, padding:"2px 6px", fontWeight:700}}>
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : view === "global" ? (
+            <>
+              <ChatMsgs msgs={curMsgs} myId={myId} cs={cs} endRef={endRef} fmtTime={fmtTime}/>
+              <ChatInput input={input} setInput={setInput} onSend={sendMsg} cs={cs}/>
+            </>
+          ) : (
+            /* DM conversation */
+            <>
+              <div style={{display:"flex", alignItems:"center", gap:8,
+                padding:"8px 12px", borderBottom:`1px solid ${cs.faint}`, flexShrink:0}}>
+                <button onClick={()=>setView("dms")}
+                  style={{background:"none",border:"none",color:cs.dim,
+                    cursor:"pointer",fontSize:18,lineHeight:1,padding:0}}>‹</button>
+                {(() => {
+                  const u = allUsers.find(u=>u.id===view);
+                  if (!u) return null;
+                  return (
+                    <div style={{display:"flex", alignItems:"center", gap:8}}>
+                      <div style={{position:"relative"}}>
+                        {u.foto
+                          ? <div style={{width:26,height:26,borderRadius:"50%",overflow:"hidden"}}>
+                              <img src={u.foto} alt={u.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}
+                                onError={e=>e.target.style.display="none"}/>
+                            </div>
+                          : <div style={{width:26,height:26,borderRadius:"50%",background:cs.acBg,
+                              display:"flex",alignItems:"center",justifyContent:"center",
+                              fontSize:9,fontWeight:700,color:cs.accent}}>{u.sigla}</div>
+                        }
+                        <span style={{position:"absolute",bottom:0,right:0,
+                          width:8,height:8,borderRadius:"50%",
+                          background:isOnline(u.id)?"#00ff6e":cs.dim,
+                          border:`2px solid ${cs.s1}`}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:cs.text}}>{u.nome}</div>
+                        <div style={{fontSize:10,color:isOnline(u.id)?cs.green:cs.dim}}>
+                          {isOnline(u.id)?"● online":"offline"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <ChatMsgs msgs={curMsgs} myId={myId} cs={cs} endRef={endRef} fmtTime={fmtTime}/>
+              <ChatInput input={input} setInput={setInput} onSend={sendMsg} cs={cs}/>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ChatMsgs({ msgs, myId, cs, endRef, fmtTime }) {
+  return (
+    <div style={{flex:1, overflow:"auto", padding:"10px 12px",
+      display:"flex", flexDirection:"column", gap:8}}>
+      {msgs.length === 0 && (
+        <div style={{color:cs.dim, fontSize:12, textAlign:"center", marginTop:24}}>
+          Nenhuma mensagem ainda. Diga oi! 👋
+        </div>
+      )}
+      {msgs.map(m => {
+        const isMe = m.fromId === myId;
+        return (
+          <div key={m.id} style={{display:"flex", flexDirection:"column",
+            alignItems: isMe ? "flex-end" : "flex-start"}}>
+            {!isMe && (
+              <div style={{fontSize:10, color:cs.dim, marginBottom:2, paddingLeft:4}}>
+                {m.fromName}
+              </div>
+            )}
+            <div style={{
+              background: isMe ? cs.accent : cs.s3,
+              color: isMe ? "#fff" : cs.text,
+              padding:"7px 11px",
+              borderRadius: isMe ? "14px 14px 3px 14px" : "14px 14px 14px 3px",
+              maxWidth:"82%", fontSize:12, lineHeight:1.4,
+              wordBreak:"break-word",
+            }}>{m.text}</div>
+            <div style={{fontSize:10, color:cs.dim, marginTop:2,
+              paddingLeft:4, paddingRight:4}}>
+              {fmtTime(m.ts)}
+            </div>
+          </div>
+        );
+      })}
+      <div ref={endRef}/>
+    </div>
+  );
+}
+
+function ChatInput({ input, setInput, onSend, cs }) {
+  return (
+    <div style={{padding:"8px 12px", borderTop:`1px solid ${cs.faint}`,
+      display:"flex", gap:8, flexShrink:0, background:cs.s2}}>
+      <input
+        value={input}
+        onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onSend();}}}
+        placeholder="Mensagem..."
+        style={{
+          flex:1, background:cs.s1,
+          border:`1px solid ${cs.b}`,
+          borderRadius:20, color:cs.text,
+          padding:"7px 14px", fontSize:12,
+          fontFamily:"inherit", outline:"none",
+        }}
+      />
+      <button onClick={onSend}
+        style={{
+          background:cs.accent, border:"none",
+          borderRadius:"50%", width:34, height:34,
+          cursor:"pointer", fontSize:16, color:"#fff",
+          display:"flex", alignItems:"center",
+          justifyContent:"center", flexShrink:0,
+        }}>↑</button>
+    </div>
+  );
+}
+
+
 // ── Supabase Storage ─────────────────────────────────────────────────────
 const SUPABASE_URL = "https://otuaojndrwreslvmgqta.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90dWFvam5kcndyZXNsdm1ncXRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NzMwMjEsImV4cCI6MjA5NzA0OTAyMX0.DqFszTE4nd6-3TbImOECURrYMk27RIaFtxIHEsDsDTI";
@@ -5017,6 +5484,13 @@ export default function App() {
           )}
         </>
       )}
+      {/* ── Chat flotante ── */}
+      <ChatFloat
+        user={user}
+        colunista={colunista}
+        gestorProfile={gestorProfile}
+        contraExtra={contraExtra}
+      />
     </div>
     </>
     </ThemeCtx.Provider>
