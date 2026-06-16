@@ -2295,9 +2295,9 @@ function IdeiaTab({
           addIdeia({colId:Number(novaCol),nome:col?.nome||"",sigla:col?.sigla||"?",editoria:novaEd||col?.editorias[0]||"",pauta:novaPauta,esboco:novaEsboco});
           setNovaPauta("");setNovaCol("");setNovaEd("");setNovaEsboco("");
         }}>Adicionar ao Banco de Ideias</Btn>
-      </div>
+      </div>}
 
-}      {/* By columnist */}
+      {/* By columnist */}
       {byCol.map(({ col, ideas }) => (
         <div key={col.id} style={{ marginBottom: 28 }}>
           <div
@@ -4464,6 +4464,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
           )}
         </div>
       ) : (
+      <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Trilha de Aprendizado</div>
@@ -4508,6 +4509,8 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
           })}
         </div>
       }
+      </div>
+      )}
 
       {adding&&(
         <Modal title="Adicionar Material" onClose={()=>setAdding(false)}>
