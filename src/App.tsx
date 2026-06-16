@@ -3341,7 +3341,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={()=>{}}
+        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
       {myTexts.length > 0 && (
         <div style={{marginBottom:20}}>
@@ -3648,7 +3648,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={()=>{}}
+        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
       <div
         style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
