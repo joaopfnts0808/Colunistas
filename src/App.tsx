@@ -1045,22 +1045,6 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
     ) : null;
 
   return (
-    <ThemeCtx.Provider value={theme}>
-    {theme === "light" && (
-      <style>{`
-        .rainbow-card-top::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #ff575b);
-        }
-        .light-mode-card {
-          box-shadow: 0 1px 6px rgba(0,0,0,0.07);
-          border: 1px solid #E8E8E8 !important;
-        }
-      `}</style>
-    )}
     <div
       style={{
         background: cs.bg,
@@ -4892,6 +4876,7 @@ export default function App() {
 
   return (
     <ThemeCtx.Provider value={theme}>
+    <>
     {theme === "light" && (
       <style>{`
         .rainbow-card-top::before {
@@ -5033,6 +5018,7 @@ export default function App() {
         </>
       )}
     </div>
+    </>
     </ThemeCtx.Provider>
   );
 }const TASK_SCHEDULE = [
