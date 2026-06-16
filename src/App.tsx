@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
 import "./styles.css";
 
 // ── Design System ─────────────────────────────────────────────────────────
@@ -77,6 +77,29 @@ const LIGHT = {
 
 // Backward compat: C always points to DARK for module-level uses
 const C = DARK;
+
+// ── Error Boundary ────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(err) {
+    return { error: err };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{padding:24,fontFamily:"monospace",fontSize:12,color:"#ff575b",background:"#0a0a0a",minHeight:"100vh"}}>
+          <div style={{fontWeight:700,marginBottom:8}}>Erro de renderização:</div>
+          <pre style={{whiteSpace:"pre-wrap",wordBreak:"break-all"}}>{String(this.state.error)}</pre>
+          <pre style={{whiteSpace:"pre-wrap",wordBreak:"break-all",color:"#707070",marginTop:8}}>{this.state.error?.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const ThemeCtx = createContext("dark");
 const useC = () => {
@@ -650,23 +673,23 @@ const COLUMNISTS = [
 // ── Chat System ───────────────────────────────────────────────────────────
 
 const getChatUserId = (user) =>
-  user.role === "gestor" ? `gestor_${user.email}` : `col_${user.colId}`;
+  user.role === "gestor" ? `gestor_${user.gestorEmail||user.email||"g"}` : `col_${user.colId}`;
 
 const getChatUserName = (user, colunista, gestorProfile) => {
   if (user.role === "colunista") return colunista?.nome || "Colunista";
-  const g = GESTORES.find(g => g.email === user.email);
+  const g = GESTORES.find(g => g.email === (user.gestorEmail||user.email));
   return g?.nome || gestorProfile?.nome || "Gestor";
 };
 
 const getChatUserSigla = (user, colunista) => {
   if (user.role === "colunista") return colunista?.sigla || "??";
-  const g = GESTORES.find(g => g.email === user.email);
+  const g = GESTORES.find(g => g.email === (user.gestorEmail||user.email));
   return g?.nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "G";
 };
 
 const getChatUserFoto = (user, colunista, contraExtra, gestorProfile) => {
   if (user.role === "colunista") return contraExtra?.[user.colId]?.foto || "";
-  const g = GESTORES.find(g => g.email === user.email);
+  const g = GESTORES.find(g => g.email === (user.gestorEmail||user.email));
   return g?.foto || gestorProfile?.foto || "";
 };
 
@@ -5012,7 +5035,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
 }
 
 // ── Main App ─────────────────────────────────────────────────────────────
-export default function App() {
+function AppInner() {
   const cs = useC();
   const [user, setUser] = useState(() => {
     try {
@@ -5608,3 +5631,10 @@ const GESTORES = [
     bioLink: "",
   },
 ];
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
+  );
+}
