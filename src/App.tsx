@@ -2160,6 +2160,7 @@ function ProfileCard({ nome, pronomes, foto, descricao, bioLink, instagram="", t
 
 function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={}, gestorProfile={}, setGestorProfile, user }) {
   const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const theme = useContext(ThemeCtx);
   const totalTexts = texts.length;
   const entregues = texts.filter(t=>t.status==="Enviado"||t.status==="Em Revisão").length;
@@ -3430,6 +3431,7 @@ function ContrapartidasTab({
 // ── GESTOR: Calendário ──────────────────────────────────────────────────
 function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
   const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const START_YEAR = 2026;
   const START_MONTH = 5;
   const months12 = Array.from({ length: 12 }, (_, i) => {
@@ -3732,6 +3734,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
 // ── GESTOR: Colunistas ──────────────────────────────────────────────────
 function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
   const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const [edFilterCol, setEdFilterCol] = useState("");
   const [search, setSearch] = useState("");
   const [profile, setProfile] = useState(null);
@@ -3912,6 +3915,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
 function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[], updateTextStatus }) {
   const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const myTotal = texts.filter(t=>t.colId===colunista?.id).length;
   const myEntregues = texts.filter(t=>t.colId===colunista?.id&&(t.status==="Enviado"||t.status==="Em Revisão"||t.status==="Publicado")).length;
   const [titulo, setTitulo] = useState("");
@@ -4290,6 +4294,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
 function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updateTextStatus }) {
   const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const [expandedId, setExpandedId] = useState(null);
   const [linkEdit, setLinkEdit] = useState({});
   const pub = texts.filter((t) => t.status === "Publicado").length;
