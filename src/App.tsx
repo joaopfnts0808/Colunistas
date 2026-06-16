@@ -4550,9 +4550,22 @@ export default function App() {
       // Seed tasks from schedule if not already in texts
       const existingKeys = new Set(seedTexts.map(t=>t.key||"").filter(Boolean));
       const missingTasks = TASK_SCHEDULE.filter(task => !existingKeys.has(task.key));
-      const allTexts = [...seedTexts, ...missingTasks];
+
+      // Sync dates: update any existing task whose dates differ from TASK_SCHEDULE
+      const scheduleByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
+      let datesUpdated = false;
+      const syncedTexts = seedTexts.map(t => {
+        const sched = scheduleByKey[t.key];
+        if (sched && (t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega)) {
+          datesUpdated = true;
+          return { ...t, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+        }
+        return t;
+      });
+
+      const allTexts = [...syncedTexts, ...missingTasks];
       setTexts(allTexts);
-      if(t.length===0 || missingTasks.length > 0) save("sx2_texts", allTexts);
+      if(t.length===0 || missingTasks.length > 0 || datesUpdated) save("sx2_texts", allTexts);
       setContrapartidas(co);
       setContraExtraState(ce);
       setCalendar(cal);
