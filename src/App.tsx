@@ -3020,15 +3020,6 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
             + Adicionar
           </Btn>
         </div>
-        <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 10,
-            }}
-          >
           {mPautas.length === 0 ? (
             <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
               Nenhuma pauta agendada.
