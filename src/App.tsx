@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
 import "./styles.css";
 
 // ── Design System ─────────────────────────────────────────────────────────
