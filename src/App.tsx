@@ -618,7 +618,7 @@ const save = async (k, v) => {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
   // Supabase como fonte de verdade (upsert)
   try {
-    await sbFetch("kv_store?on_conflict=key", {
+    await sbFetch("kv_store", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({ key: k, value: JSON.stringify(v), updated_at: new Date().toISOString() }),
@@ -629,7 +629,7 @@ const save = async (k, v) => {
 const load = async (k, d = null) => {
   // Supabase primeiro
   try {
-    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value,updated_at&order=updated_at.desc&limit=1`);
+    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value`);
     if (rows && rows.length > 0) {
       const v = JSON.parse(rows[0].value);
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
@@ -1285,6 +1285,7 @@ function NavBar({
   notifCount,
   onLogout,
   gsStatus,
+  contraExtra={},
 }) {
   const gestorTabs = [
     { id: "painel", label: "Painel" },
@@ -1393,7 +1394,10 @@ function NavBar({
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {colunista && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar sigla={colunista.sigla} size={26} />
+              {contraExtra?.[colunista.id]?.foto
+                ? <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",border:`1px solid ${C.accent}44`,flexShrink:0}}><img src={contraExtra[colunista.id].foto} alt={colunista.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/></div>
+                : <Avatar sigla={colunista.sigla} size={26} />
+              }
               <span style={{ fontSize: 12, color: C.muted }}>
                 {colunista.nome}
               </span>
@@ -2447,7 +2451,6 @@ function ContrapartidasTab({
   const [editData, setEditData] = useState({
     foto: "",
     descricao: "",
-    bioLink: "",
     obs: "",
   });
   const tipos = [
@@ -3295,7 +3298,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 }
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
-function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra }) {
+function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[] }) {
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3327,6 +3330,8 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
   };
 
     const colExtra = (contraExtra||{})[colunista?.id] || {};
+  const myTexts = texts.filter(t=>t.colId===colunista?.id);
+  const [expandedId, setExpandedId] = useState(null);
   return (
     <div style={{padding:20}}>
       <ProfileCard
@@ -3335,8 +3340,42 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
+        onEdit={()=>{}}
       />
+      {myTexts.length > 0 && (
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:10,color:C.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Suas Tarefas</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {myTexts.map(t=>{
+              const open=expandedId===t.id;
+              return(
+                <div key={t.id} onClick={()=>setExpandedId(open?null:t.id)}
+                  style={{background:C.s1,border:`1px solid ${open?C.accent+"44":C.faint}`,borderRadius:6,cursor:"pointer",overflow:"hidden"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px"}}>
+                    <div style={{fontSize:13,fontWeight:600,flex:1,paddingRight:8}}>{t.titulo}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <StatusBadge status={t.status}/>
+                      <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                    </div>
+                  </div>
+                  {open&&(
+                    <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                      <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:C.dim}}>{t.editoria}</span>
+                        {t.dataEntrega&&<span style={{fontSize:11,color:C.dim}}>Entrega: {t.dataEntrega}</span>}
+                        {t.dataPublicacao&&<span style={{fontSize:11,color:C.dim}}>Publicação: {t.dataPublicacao}</span>}
+                      </div>
+                      {t.briefing&&<div style={{fontSize:12,color:C.muted,background:C.s2,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.accent,fontWeight:600}}>Briefing: </span>{t.briefing}</div>}
+                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
+                      {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {sugerirMode ? (
         <>
           <div
@@ -3575,6 +3614,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
 function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
+  const [expandedId, setExpandedId] = useState(null);
   const pub = texts.filter((t) => t.status === "Publicado").length;
   const pen = texts.filter((t) =>
     ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
@@ -3588,7 +3628,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
         foto={colExtra.foto||""}
         descricao={colExtra.descricao||""}
         bioLink={colExtra.bioLink||""}
-        onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
+        onEdit={()=>{}}
       />
       <div
         style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
@@ -3606,16 +3646,21 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
           {texts
             .slice()
             .reverse()
-            .map((t) => (
+            .map((t) => {
+              const open = expandedId === t.id;
+              return (
               <div
                 key={t.id}
+                onClick={()=>setExpandedId(open?null:t.id)}
                 style={{
                   background: C.s1,
-                  border: `1px solid ${C.faint}`,
+                  border: `1px solid ${open?C.accent+"44":C.faint}`,
                   borderRadius: 6,
-                  padding: "14px 16px",
+                  cursor: "pointer",
+                  overflow: "hidden",
                 }}
               >
+                <div style={{padding:"14px 16px"}}>
                 <div
                   style={{
                     display: "flex",
@@ -3634,7 +3679,10 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
                   >
                     {t.titulo}
                   </div>
-                  <StatusBadge status={t.status} />
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <StatusBadge status={t.status} />
+                    <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11, color: C.dim }}>
@@ -3649,41 +3697,28 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
                     Enviado: {t.dataSubmissao}
                   </span>
                 </div>
-                {t.briefing && (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
-                      color: C.muted,
-                      background: C.s2,
-                      borderRadius: 4,
-                      padding: "8px 10px",
-                    }}
-                  >
-                    <span style={{ color: C.accent, fontWeight: 600 }}>
-                      Briefing:
-                    </span>{" "}
-                    {t.briefing}
+                </div>
+                {open && (
+                  <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                    {t.briefing && (
+                      <div style={{fontSize:12,color:C.muted,background:C.s2,borderRadius:4,padding:"8px 10px"}}>
+                        <span style={{color:C.accent,fontWeight:600}}>Briefing: </span>{t.briefing}
+                      </div>
+                    )}
+                    {t.dataPublicacao&&<div style={{fontSize:11,color:C.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
+                    {t.link && (
+                      <a href={t.link} target="_blank" rel="noreferrer"
+                        style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
+                        onClick={e=>e.stopPropagation()}>
+                        {t.link}
+                      </a>
+                    )}
+                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
                   </div>
                 )}
-                {t.link && (
-                  <a
-                    href={t.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      fontSize: 11,
-                      color: C.accent,
-                      display: "block",
-                      marginTop: 6,
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {t.link}
-                  </a>
-                )}
               </div>
-            ))}
+              );
+            })}
         </div>
       )}
     </div>
@@ -4442,6 +4477,7 @@ export default function App() {
           localStorage.removeItem("sx2_tab");
         }}
         gsStatus={gsStatus}
+        contraExtra={contraExtra}
       />
       {user.role === "gestor" ? (
         <>
@@ -4507,6 +4543,7 @@ export default function App() {
               colunista={colunista}
               addText={addText}
               addIdeia={addIdeia}
+              texts={texts}
               contraExtra={contraExtra}
               setContraExtra={setContraExtra}
             />
