@@ -618,7 +618,7 @@ const save = async (k, v) => {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
   // Supabase como fonte de verdade (upsert)
   try {
-    await sbFetch("kv_store?on_conflict=key", {
+    await sbFetch("kv_store", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify({ key: k, value: JSON.stringify(v), updated_at: new Date().toISOString() }),
@@ -629,7 +629,7 @@ const save = async (k, v) => {
 const load = async (k, d = null) => {
   // Supabase primeiro
   try {
-    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value,updated_at&order=updated_at.desc&limit=1`);
+    const rows = await sbFetch(`kv_store?key=eq.${encodeURIComponent(k)}&select=value`);
     if (rows && rows.length > 0) {
       const v = JSON.parse(rows[0].value);
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
@@ -1285,6 +1285,7 @@ function NavBar({
   notifCount,
   onLogout,
   gsStatus,
+  contraExtra={},
 }) {
   const gestorTabs = [
     { id: "painel", label: "Painel" },
@@ -1393,7 +1394,10 @@ function NavBar({
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {colunista && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar sigla={colunista.sigla} size={26} />
+              {contraExtra?.[colunista.id]?.foto
+                ? <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",border:`1px solid ${C.accent}44`,flexShrink:0}}><img src={contraExtra[colunista.id].foto} alt={colunista.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/></div>
+                : <Avatar sigla={colunista.sigla} size={26} />
+              }
               <span style={{ fontSize: 12, color: C.muted }}>
                 {colunista.nome}
               </span>
@@ -1819,8 +1823,10 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                         fontStyle: "italic",
                       }}
                     >
-                      Briefing: {t.briefing.slice(0, 60)}
-                      {t.briefing.length > 60 ? "..." : ""}
+                      {t.briefing.startsWith("http") ? "Briefing: " : "Briefing: "}
+                      {t.briefing.startsWith("http")
+                        ? t.briefing.slice(0, 50) + (t.briefing.length > 50 ? "..." : "")
+                        : t.briefing.slice(0, 60) + (t.briefing.length > 60 ? "..." : "")}
                     </div>
                   )}
                 </div>
@@ -1906,27 +1912,12 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
             >
               <Label c={C.accent}>Editar Tarefa</Label>
               <div>
-                <Label>Briefing / Instruções</Label>
+                <Label>Briefing</Label>
                 <textarea
                   value={editField.briefing}
-                  onChange={(e) =>
-                    setEditField((f) => ({ ...f, briefing: e.target.value }))
-                  }
-                  placeholder="Adicione briefing, instruções editoriais, contexto..."
-                  style={{
-                    width: "100%",
-                    background: C.s1,
-                    border: `1px solid ${C.b}`,
-                    color: C.text,
-                    padding: "9px 12px",
-                    borderRadius: 4,
-                    fontSize: 13,
-                    minHeight: 80,
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
+                  onChange={(e) => setEditField((f) => ({ ...f, briefing: e.target.value }))}
+                  placeholder="Link, instruções ou contexto para o colunista..."
+                  style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
                 />
               </div>
               <div>
@@ -2090,7 +2081,7 @@ function IdeiaTab({
         sigla: col.sigla,
         editoria: col.editorias[0] || "",
         pauta: p,
-        status: ideasStatus[key] || "disponível",
+        status: texts.some(t=>t.key===key) ? "em tarefa" : (ideasStatus[key] || "disponível"),
       };
     })
   ).concat(
@@ -2492,7 +2483,6 @@ function ContrapartidasTab({
   const [editData, setEditData] = useState({
     foto: "",
     descricao: "",
-    bioLink: "",
     obs: "",
   });
   const tipos = [
@@ -3340,7 +3330,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 }
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
-function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra }) {
+function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[], updateTextStatus }) {
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3372,6 +3362,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
   };
 
     const colExtra = (contraExtra||{})[colunista?.id] || {};
+  const myTexts = texts.filter(t=>t.colId===colunista?.id);
+  const [expandedId, setExpandedId] = useState(null);
+  const [linkEdit, setLinkEdit] = useState({});
   return (
     <div style={{padding:20}}>
       <ProfileCard
@@ -3382,6 +3375,84 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
         bioLink={colExtra.bioLink||""}
         onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
+      {myTexts.length > 0 && (
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:10,color:C.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Suas Tarefas</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {myTexts.map(t=>{
+              const open=expandedId===t.id;
+              return(
+                <div key={t.id} onClick={()=>setExpandedId(open?null:t.id)}
+                  style={{background:C.s1,border:`1px solid ${open?C.accent+"44":C.faint}`,borderRadius:6,cursor:"pointer",overflow:"hidden"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px"}}>
+                    <div style={{fontSize:13,fontWeight:600,flex:1,paddingRight:8}}>{t.titulo}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <StatusBadge status={t.status}/>
+                      <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                    </div>
+                  </div>
+                  {open&&(
+                    <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:C.dim}}>{t.editoria}</span>
+                        {t.dataEntrega&&<span style={{fontSize:11,color:C.dim}}>Entrega: {t.dataEntrega}</span>}
+                        {t.dataPublicacao&&<span style={{fontSize:11,color:C.dim}}>Publicação: {t.dataPublicacao}</span>}
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        <Label>Briefing</Label>
+                        <textarea
+                          value={linkEdit[`brief_${t.id}`]??t.briefing??""}
+                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
+                          onClick={e=>e.stopPropagation()}
+                          placeholder="Link, instruções ou contexto..."
+                          style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
+                        />
+                        <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                      </div>
+                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
+                    {t.feedback&&<div style={{fontSize:12,background:C.purBg,border:`1px solid ${C.purple}33`,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.purple,fontWeight:600}}>Feedback: </span><span style={{color:C.muted}}>{t.feedback}</span></div>}
+                      {t.feedback&&<div style={{fontSize:12,background:C.purBg,border:`1px solid ${C.purple}33`,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.purple,fontWeight:600}}>Feedback: </span><span style={{color:C.muted}}>{t.feedback}</span></div>}
+                      <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <input
+                            value={linkEdit[t.id]??t.link??""}
+                            onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                            onClick={e=>e.stopPropagation()}
+                            placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                            style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                          />
+                          <button
+                            onClick={e=>{
+                              e.stopPropagation();
+                              const newLink=linkEdit[t.id]??"";
+                              if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                              setLinkEdit(p=>({...p,[t.id]:undefined}));
+                            }}
+                            style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                          >Salvar link</button>
+                        </div>
+                        {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                          {[{s:"Pendente",label:"Pendente"},{s:"Enviado",label:"Texto entregue"},{s:"Publicado",label:"Publicado"}].map(({s,label})=>{
+                            const cfg=STATUS_CFG[s]||{};
+                            const active=t.status===s;
+                            return(
+                              <button key={s}
+                                onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
+                                style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                              >{label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {sugerirMode ? (
         <>
           <div
@@ -3619,7 +3690,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
 }
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
-function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
+function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updateTextStatus }) {
+  const [expandedId, setExpandedId] = useState(null);
+  const [linkEdit, setLinkEdit] = useState({});
   const pub = texts.filter((t) => t.status === "Publicado").length;
   const pen = texts.filter((t) =>
     ["Enviado", "Em Revisão", "Pendente"].includes(t.status)
@@ -3651,16 +3724,21 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
           {texts
             .slice()
             .reverse()
-            .map((t) => (
+            .map((t) => {
+              const open = expandedId === t.id;
+              return (
               <div
                 key={t.id}
+                onClick={()=>setExpandedId(open?null:t.id)}
                 style={{
                   background: C.s1,
-                  border: `1px solid ${C.faint}`,
+                  border: `1px solid ${open?C.accent+"44":C.faint}`,
                   borderRadius: 6,
-                  padding: "14px 16px",
+                  cursor: "pointer",
+                  overflow: "hidden",
                 }}
               >
+                <div style={{padding:"14px 16px"}}>
                 <div
                   style={{
                     display: "flex",
@@ -3679,7 +3757,10 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
                   >
                     {t.titulo}
                   </div>
-                  <StatusBadge status={t.status} />
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <StatusBadge status={t.status} />
+                    <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11, color: C.dim }}>
@@ -3694,41 +3775,66 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra }) {
                     Enviado: {t.dataSubmissao}
                   </span>
                 </div>
-                {t.briefing && (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
-                      color: C.muted,
-                      background: C.s2,
-                      borderRadius: 4,
-                      padding: "8px 10px",
-                    }}
-                  >
-                    <span style={{ color: C.accent, fontWeight: 600 }}>
-                      Briefing:
-                    </span>{" "}
-                    {t.briefing}
+                </div>
+                {open && (
+                  <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      <Label>Briefing</Label>
+                      <textarea
+                        value={linkEdit[`brief_${t.id}`]??t.briefing??""}
+                        onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
+                        onClick={e=>e.stopPropagation()}
+                        placeholder="Link, instruções ou contexto..."
+                        style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
+                      />
+                      <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                    </div>
+                    {t.dataPublicacao&&<div style={{fontSize:11,color:C.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
+                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
+                    <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <input
+                          value={linkEdit[t.id]??t.link??""}
+                          onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
+                          onClick={e=>e.stopPropagation()}
+                          placeholder="Cole o link do seu texto (Google Docs, Drive...)"
+                          style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                        />
+                        <button
+                          onClick={e=>{
+                            e.stopPropagation();
+                            const newLink=linkEdit[t.id]??"";
+                            if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
+                            setLinkEdit(p=>({...p,[t.id]:undefined}));
+                          }}
+                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                        >Salvar link</button>
+                      </div>
+                      {t.link&&(linkEdit[t.id]===undefined)&&(
+                        <a href={t.link} target="_blank" rel="noreferrer"
+                          style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
+                          onClick={e=>e.stopPropagation()}>
+                          {t.link}
+                        </a>
+                      )}
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        {[{s:"Pendente",label:"Pendente"},{s:"Enviado",label:"Texto entregue"},{s:"Publicado",label:"Publicado"}].map(({s,label})=>{
+                          const cfg=STATUS_CFG[s]||{};
+                          const active=t.status===s;
+                          return(
+                            <button key={s}
+                              onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
+                              style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                            >{label}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
-                {t.link && (
-                  <a
-                    href={t.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      fontSize: 11,
-                      color: C.accent,
-                      display: "block",
-                      marginTop: 6,
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {t.link}
-                  </a>
-                )}
               </div>
-            ))}
+              );
+            })}
         </div>
       )}
     </div>
@@ -4050,7 +4156,7 @@ function PdfViewer({ url, leituraId, colId, onProgress }) {
   }, [page, pdfDoc]);
 
   if(loading) return <div style={{padding:40,textAlign:"center",color:C.dim}}>Carregando PDF...</div>;
-  if(error) return <div style={{padding:40,textAlign:"center",color:C.red}}>Não foi possível carregar. Verifique se o PDF está hospedado no Vercel (/public).</div>;
+  if(error) return <div style={{padding:40,textAlign:"center",color:C.red}}>Não foi possível carregar. Certifique-se que o PDF está em /public/pdfs/ no repositório.</div>;
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
       <canvas id={`pdf-canvas-${leituraId}`} style={{maxWidth:"100%",border:`1px solid ${C.faint}`,borderRadius:4}}/>
@@ -4547,6 +4653,7 @@ export default function App() {
           localStorage.removeItem("sx2_tab");
         }}
         gsStatus={gsStatus}
+        contraExtra={contraExtra}
       />
       {user.role === "gestor" ? (
         <>
@@ -4612,8 +4719,10 @@ export default function App() {
               colunista={colunista}
               addText={addText}
               addIdeia={addIdeia}
+              texts={texts}
               contraExtra={contraExtra}
               setContraExtra={setContraExtra}
+              updateTextStatus={updateTextStatus}
             />
           )}
           {tab === "meus" && (
@@ -4622,6 +4731,7 @@ export default function App() {
               colunista={colunista}
               contraExtra={contraExtra}
               setContraExtra={setContraExtra}
+              updateTextStatus={updateTextStatus}
             />
           )}
           {tab === "calendario" && (
