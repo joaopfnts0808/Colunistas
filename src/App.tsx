@@ -2061,6 +2061,7 @@ function IdeiaTab({
   const [selected, setSelected] = useState([]);
   const [selectMode, setSelectMode] = useState(false);
   const [sugestaoModal, setSugestaoModal] = useState(false);
+  const [sugestaoOpen, setSugestaoOpen] = useState(false);
   const [novaPauta, setNovaPauta] = useState("");
   const [novaEd, setNovaEd] = useState("");
   const [novaCol, setNovaCol] = useState("");
