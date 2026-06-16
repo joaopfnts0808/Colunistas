@@ -1,35 +1,87 @@
 // @ts-nocheck
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import "./styles.css";
 
-// ── Design System Baseado no Manual [SSEX BBOX] ─────────────
-const C = {
-  fontBase: "'Gibson', sans-serif",
-  fontDestaque: "'Oswald', sans-serif",
+// ── Design System ─────────────────────────────────────────────────────────
+const GRADIENT = "linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #ff575b)";
+const FONT_BASE = "'Gibson', sans-serif";
+const FONT_DESTAQUE = "'Oswald', sans-serif";
+
+const DARK = {
+  fontBase: FONT_BASE,
+  fontDestaque: FONT_DESTAQUE,
   bg: "#000000",
   s1: "#111111",
   s2: "#181818",
   s3: "#1e1e1e",
   b: "#262626",
   b2: "#333333",
-  accent: "#951F1E", // Red Wine Oficial
+  accent: "#951F1E",
   acDim: "#951F1E18",
   acBg: "#1a0505",
-  purple: "#6d20ff", // Cores do Gradiente Secundário
+  acA33: "#951F1E33",
+  acA44: "#951F1E44",
+  purple: "#6d20ff",
   purBg: "#10052a",
+  purA33: "#6d20ff33",
+  purA44: "#6d20ff44",
   green: "#00ff6e",
   grBg: "#001a0e",
+  grA44: "#00ff6e44",
   amber: "#fff700",
   amBg: "#1a1a00",
+  amA44: "#fff70044",
   red: "#951F1E",
   redBg: "#1a0505",
+  redA44: "#951F1E44",
   text: "#FFFFFF",
-  muted: "#CCCCCC", // Light Gray Oficial
-  dim: "#707070", // Dark Gray Oficial
+  muted: "#CCCCCC",
+  dim: "#707070",
   faint: "#2e2e2e",
-  // Gradiente vibrante secundário do manual
-  gradient:
-    "linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #f575b)",
+  gradient: GRADIENT,
+};
+
+const LIGHT = {
+  fontBase: FONT_BASE,
+  fontDestaque: FONT_DESTAQUE,
+  bg: "#FFFFFF",
+  s1: "#F5F5F5",
+  s2: "#EEEEEE",
+  s3: "#E6E6E6",
+  b: "#DADADA",
+  b2: "#CACACA",
+  accent: "#951F1E",
+  acDim: "#951F1E10",
+  acBg: "#FFF3F3",
+  acA33: "#951F1E22",
+  acA44: "#951F1E33",
+  purple: "#5a0eee",
+  purBg: "#F3EEFF",
+  purA33: "#5a0eee22",
+  purA44: "#5a0eee33",
+  green: "#009944",
+  grBg: "#EDFFF5",
+  grA44: "#00994433",
+  amber: "#B87800",
+  amBg: "#FFFBE8",
+  amA44: "#B8780033",
+  red: "#951F1E",
+  redBg: "#FFF3F3",
+  redA44: "#951F1E33",
+  text: "#111111",
+  muted: "#444444",
+  dim: "#888888",
+  faint: "#E2E2E2",
+  gradient: GRADIENT,
+};
+
+// Backward compat: C always points to DARK for module-level uses
+const C = DARK;
+
+const ThemeCtx = createContext("dark");
+const useC = () => {
+  const theme = useContext(ThemeCtx);
+  return theme === "light" ? LIGHT : DARK;
 };
 
 const MONTHS = [
@@ -80,13 +132,13 @@ const ED_COLORS = {
   "Tecnologia e Futuro": "#ff8414",
 };
 
-const STATUS_CFG = {
-  Pendente: { color: C.dim, bg: C.s2 },
-  Enviado: { color: C.amber, bg: C.amBg },
-  "Em Revisão": { color: C.purple, bg: C.purBg },
-  Publicado: { color: C.green, bg: C.grBg },
-  Rejeitado: { color: C.accent, bg: C.acBg },
-};
+const getStatusCfg = (cs) => ({
+  Pendente: { color: cs.dim, bg: cs.s2 },
+  Enviado: { color: cs.amber, bg: cs.amBg },
+  "Em Revisão": { color: cs.purple, bg: cs.purBg },
+  Publicado: { color: cs.green, bg: cs.grBg },
+  Rejeitado: { color: cs.accent, bg: cs.acBg },
+});
 
 const COLUMNISTS = [
   {
@@ -659,21 +711,24 @@ const loadAll = async () => {
 };
 
 // ── Tiny UI primitives ──────────────────────────────────────────────────
-const Label = ({ c = C.muted, ...p }) => (
-  <div
-    style={{
-      fontSize: 10,
-      color: c,
-      letterSpacing: "0.12em",
-      textTransform: "uppercase",
-      marginBottom: 7,
-      fontFamily: C.fontBase,
-      ...p.style,
-    }}
-  >
-    {p.children}
-  </div>
-);
+function Label({ c, ...p }) {
+  const cs = useC();
+  return (
+    <div
+      style={{
+        fontSize: 10,
+        color: c ?? cs.muted,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        marginBottom: 7,
+        fontFamily: cs.fontBase,
+        ...p.style,
+      }}
+    >
+      {p.children}
+    </div>
+  );
+}
 
 const Badge = ({ label, color, bg, style = {} }) => (
   <span
@@ -692,32 +747,36 @@ const Badge = ({ label, color, bg, style = {} }) => (
   </span>
 );
 
-const Divider = ({ style = {} }) => (
-  <div style={{ borderBottom: `1px solid ${C.faint}`, ...style }} />
-);
+function Divider({ style = {} }) {
+  const cs = useC();
+  return <div style={{ borderBottom: `1px solid ${cs.faint}`, ...style }} />;
+}
 
-const Avatar = ({ sigla, size = 32, style = {} }) => (
-  <div
-    style={{
-      width: size,
-      height: size,
-      borderRadius: "50%",
-      background: C.acBg,
-      border: `1px solid ${C.accent}33`,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: size * 0.3,
-      fontWeight: 700,
-      color: C.accent,
-      flexShrink: 0,
-      fontFamily: C.fontDestaque,
-      ...style,
-    }}
-  >
-    {sigla}
-  </div>
-);
+function Avatar({ sigla, size = 32, style = {} }) {
+  const cs = useC();
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: cs.acBg,
+        border: `1px solid ${cs.acA33}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size * 0.3,
+        fontWeight: 700,
+        color: cs.accent,
+        flexShrink: 0,
+        fontFamily: cs.fontDestaque,
+        ...style,
+      }}
+    >
+      {sigla}
+    </div>
+  );
+}
 
 function Btn({
   onClick,
@@ -727,6 +786,7 @@ function Btn({
   disabled,
   style = {},
 }) {
+  const cs = useC();
   const base = {
     cursor: disabled ? "not-allowed" : "pointer",
     borderRadius: 4,
@@ -740,32 +800,32 @@ function Btn({
   const v = {
     ghost: {
       background: "transparent",
-      border: `1px solid ${C.b2}`,
-      color: C.muted,
+      border: `1px solid ${cs.b2}`,
+      color: cs.muted,
       padding: small ? "4px 10px" : "7px 16px",
     },
     primary: {
-      background: C.acBg,
-      border: `1px solid ${C.accent}44`,
-      color: C.accent,
+      background: cs.acBg,
+      border: `1px solid ${cs.acA44}`,
+      color: cs.accent,
       padding: small ? "4px 10px" : "7px 16px",
     },
     success: {
-      background: C.grBg,
-      border: `1px solid ${C.green}44`,
-      color: C.green,
+      background: cs.grBg,
+      border: `1px solid ${cs.grA44}`,
+      color: cs.green,
       padding: small ? "4px 10px" : "7px 16px",
     },
     danger: {
-      background: C.redBg,
-      border: `1px solid ${C.red}44`,
-      color: C.red,
+      background: cs.redBg,
+      border: `1px solid ${cs.redA44}`,
+      color: cs.red,
       padding: small ? "4px 10px" : "7px 16px",
     },
     purple: {
-      background: C.purBg,
-      border: `1px solid ${C.purple}44`,
-      color: C.purple,
+      background: cs.purBg,
+      border: `1px solid ${cs.purA44}`,
+      color: cs.purple,
       padding: small ? "4px 10px" : "7px 16px",
     },
   };
@@ -780,6 +840,8 @@ function Btn({
 }
 
 function Modal({ title, onClose, children, width = 560 }) {
+  const cs = useC();
+  const theme = useContext(ThemeCtx);
   return (
     <div
       style={{
@@ -795,8 +857,8 @@ function Modal({ title, onClose, children, width = 560 }) {
     >
       <div
         style={{
-          background: C.s1,
-          border: `1px solid ${C.b}`,
+          background: cs.s1,
+          border: `1px solid ${cs.b}`,
           borderRadius: 8,
           width: "100%",
           maxWidth: width,
@@ -810,14 +872,14 @@ function Modal({ title, onClose, children, width = 560 }) {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "16px 20px",
-            borderBottom: `1px solid ${C.faint}`,
+            borderBottom: `1px solid ${cs.faint}`,
           }}
         >
           <div
             style={{
               fontWeight: 700,
               fontSize: 15,
-              fontFamily: C.fontDestaque,
+              fontFamily: cs.fontDestaque,
             }}
           >
             {title}
@@ -827,7 +889,7 @@ function Modal({ title, onClose, children, width = 560 }) {
             style={{
               background: "none",
               border: "none",
-              color: C.dim,
+              color: cs.dim,
               cursor: "pointer",
               fontSize: 20,
               lineHeight: 1,
@@ -843,6 +905,7 @@ function Modal({ title, onClose, children, width = 560 }) {
 }
 
 function Input({ value, onChange, placeholder, type = "text", style = {} }) {
+  const cs = useC();
   return (
     <input
       type={type}
@@ -851,9 +914,9 @@ function Input({ value, onChange, placeholder, type = "text", style = {} }) {
       placeholder={placeholder}
       style={{
         width: "100%",
-        background: C.s2,
-        border: `1px solid ${C.b}`,
-        color: C.text,
+        background: cs.s2,
+        border: `1px solid ${cs.b}`,
+        color: cs.text,
         padding: "9px 12px",
         borderRadius: 4,
         fontSize: 14,
@@ -867,15 +930,16 @@ function Input({ value, onChange, placeholder, type = "text", style = {} }) {
 }
 
 function Select({ value, onChange, options, placeholder, style = {} }) {
+  const cs = useC();
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
         width: "100%",
-        background: C.s2,
-        border: `1px solid ${C.b}`,
-        color: value ? C.text : C.dim,
+        background: cs.s2,
+        border: `1px solid ${cs.b}`,
+        color: value ? cs.text : cs.dim,
         padding: "9px 12px",
         borderRadius: 4,
         fontSize: 14,
@@ -896,12 +960,15 @@ function Select({ value, onChange, options, placeholder, style = {} }) {
 }
 
 function StatusBadge({ status }) {
+  const cs = useC();
+  const STATUS_CFG = getStatusCfg(cs);
   const cfg = STATUS_CFG[status] || STATUS_CFG["Enviado"];
   return <Badge label={status} color={cfg.color} bg={cfg.bg} />;
 }
 
 // ── Login Screen ────────────────────────────────────────────────────────
 function LoginScreen({ onLogin, passwords, savePasswords }) {
+  const cs = useC();
   const [step, setStep] = useState("role");
   const [colId, setColId] = useState("");
   const [email, setEmail] = useState("");
@@ -964,12 +1031,12 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
     erro ? (
       <div
         style={{
-          background: C.redBg,
-          border: `1px solid ${C.red}44`,
+          background: cs.redBg,
+          border: `1px solid ${cs.redA44}`,
           borderRadius: 4,
           padding: "8px 12px",
           fontSize: 12,
-          color: C.red,
+          color: cs.red,
           marginBottom: 12,
         }}
       >
@@ -978,44 +1045,60 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
     ) : null;
 
   return (
+    <ThemeCtx.Provider value={theme}>
+    {theme === "light" && (
+      <style>{`
+        .rainbow-card-top::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #ff575b);
+        }
+        .light-mode-card {
+          box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+          border: 1px solid #E8E8E8 !important;
+        }
+      `}</style>
+    )}
     <div
       style={{
-        background: C.bg,
+        background: cs.bg,
         height: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: C.fontBase,
+        fontFamily: cs.fontBase,
       }}
     >
       <div
         style={{
           width: 420,
-          background: C.s1,
-          border: `1px solid ${C.b}`,
+          background: cs.s1,
+          border: `1px solid ${cs.b}`,
           borderRadius: 10,
           overflow: "hidden",
           position: "relative",
         }}
       >
         {/* Barra de Arco-Íris [SSEX BBOX] */}
-        <div style={{ height: 6, background: C.gradient, width: "100%" }} />
+        <div style={{ height: 6, background: cs.gradient, width: "100%" }} />
 
         <div
           style={{
             padding: "22px 24px 18px",
-            borderBottom: `1px solid ${C.faint}`,
+            borderBottom: `1px solid ${cs.faint}`,
           }}
         >
           <div
             style={{
               fontSize: 10,
-              color: C.accent,
+              color: cs.accent,
               fontWeight: 700,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               marginBottom: 8,
-              fontFamily: C.fontDestaque,
+              fontFamily: cs.fontDestaque,
             }}
           >
             [SSEX BBOX]
@@ -1024,13 +1107,13 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
             style={{
               fontSize: 21,
               fontWeight: 700,
-              color: C.text,
-              fontFamily: C.fontDestaque,
+              color: cs.text,
+              fontFamily: cs.fontDestaque,
             }}
           >
             Gestão Editorial
           </div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: cs.muted, marginTop: 4 }}>
             Noves Colunistas 2026
           </div>
         </div>
@@ -1048,8 +1131,8 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
                     setSenha("");
                   }}
                   style={{
-                    background: C.s2,
-                    border: `1px solid ${C.accent}33`,
+                    background: cs.s2,
+                    border: `1px solid ${cs.acA33}`,
                     borderRadius: 6,
                     padding: "14px 16px",
                     cursor: "pointer",
@@ -1061,13 +1144,13 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
                     style={{
                       fontSize: 14,
                       fontWeight: 600,
-                      color: C.text,
+                      color: cs.text,
                       marginBottom: 3,
                     }}
                   >
-                    <span style={{ color: C.accent }}>Gestor</span>
+                    <span style={{ color: cs.accent }}>Gestor</span>
                   </div>
-                  <div style={{ fontSize: 11, color: C.muted }}>
+                  <div style={{ fontSize: 11, color: cs.muted }}>
                     Painel completo: textos, ideias, contrapartidas, calendario
                   </div>
                 </button>
@@ -1078,8 +1161,8 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
                     setSenha("");
                   }}
                   style={{
-                    background: C.s2,
-                    border: `1px solid ${C.purple}33`,
+                    background: cs.s2,
+                    border: `1px solid ${cs.purA33}`,
                     borderRadius: 6,
                     padding: "14px 16px",
                     cursor: "pointer",
@@ -1091,13 +1174,13 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
                     style={{
                       fontSize: 14,
                       fontWeight: 600,
-                      color: C.text,
+                      color: cs.text,
                       marginBottom: 3,
                     }}
                   >
-                    <span style={{ color: C.purple }}>Colunista</span>
+                    <span style={{ color: cs.purple }}>Colunista</span>
                   </div>
-                  <div style={{ fontSize: 11, color: C.muted }}>
+                  <div style={{ fontSize: 11, color: cs.muted }}>
                     Enviar textos, acompanhar publicacoes e contrapartidas
                   </div>
                 </button>
@@ -1202,8 +1285,8 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
             <>
               <div
                 style={{
-                  background: C.amBg,
-                  border: `1px solid ${C.amber}44`,
+                  background: cs.amBg,
+                  border: `1px solid ${cs.amA44}`,
                   borderRadius: 6,
                   padding: "12px 14px",
                   marginBottom: 18,
@@ -1212,16 +1295,16 @@ function LoginScreen({ onLogin, passwords, savePasswords }) {
                 <div
                   style={{
                     fontSize: 12,
-                    color: C.amber,
+                    color: cs.amber,
                     fontWeight: 700,
                     marginBottom: 4,
                   }}
                 >
                   Primeiro acesso
                 </div>
-                <div style={{ fontSize: 12, color: C.muted }}>
+                <div style={{ fontSize: 12, color: cs.muted }}>
                   Ola,{" "}
-                  <strong style={{ color: C.text }}>
+                  <strong style={{ color: cs.text }}>
                     {col.nome.split(" ")[0]}
                   </strong>
                   ! Por seguranca, crie uma senha pessoal antes de continuar.
@@ -1289,6 +1372,7 @@ function NavBar({
   theme="dark",
   setTheme,
 }) {
+  const cs = useC();
   const gestorTabs = [
     { id: "painel", label: "Painel" },
     { id: "ideias", label: "Banco de Ideias" },
@@ -1311,18 +1395,19 @@ function NavBar({
   return (
     <div
       style={{
-        background: C.s1,
-        borderBottom: `1px solid ${C.faint}`,
+        background: cs.s1,
+        borderBottom: `1px solid ${cs.faint}`,
         position: "sticky",
         top: 0,
         zIndex: 90,
+        boxShadow: theme === "light" ? "0 2px 10px rgba(0,0,0,0.06)" : "none",
       }}
     >
       {/* Barra de Arco-Íris [SSEX BBOX] */}
       <div
         style={{
-          height: 4,
-          background: C.gradient,
+          height: theme === "light" ? 5 : 4,
+          background: cs.gradient,
           width: "100%",
           position: "absolute",
           top: 0,
@@ -1345,9 +1430,9 @@ function NavBar({
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.18em",
-              color: C.accent,
+              color: cs.accent,
               textTransform: "uppercase",
-              fontFamily: C.fontDestaque,
+              fontFamily: cs.fontDestaque,
             }}
           >
             [SSEX BBOX]
@@ -1360,14 +1445,14 @@ function NavBar({
                 style={{
                   background: "none",
                   border: "none",
-                  color: activeTab === t.id ? C.text : C.dim,
+                  color: activeTab === t.id ? cs.text : cs.dim,
                   padding: "0 12px",
                   height: 48,
                   cursor: "pointer",
                   fontSize: 12,
                   fontWeight: activeTab === t.id ? 600 : 400,
                   borderBottom: activeTab === t.id ? `3px solid transparent` : "2px solid transparent",
-                  borderImage: activeTab === t.id ? `${C.gradient} 1` : "none",
+                  borderImage: activeTab === t.id ? `${cs.gradient} 1` : "none",
                   transition: "color 0.15s",
                   fontFamily: "inherit",
                 }}
@@ -1377,7 +1462,7 @@ function NavBar({
                   <span
                     style={{
                       marginLeft: 5,
-                      background: C.accent,
+                      background: cs.accent,
                       color: "#fff",
                       borderRadius: "50%",
                       fontSize: 9,
@@ -1396,10 +1481,10 @@ function NavBar({
           {colunista && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {contraExtra?.[colunista.id]?.foto
-                ? <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",border:`1px solid ${C.accent}44`,flexShrink:0}}><img src={contraExtra[colunista.id].foto} alt={colunista.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/></div>
+                ? <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",border:`1px solid ${cs.acA44}`,flexShrink:0}}><img src={contraExtra[colunista.id].foto} alt={colunista.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/></div>
                 : <Avatar sigla={colunista.sigla} size={26} />
               }
-              <span style={{ fontSize: 12, color: C.muted }}>
+              <span style={{ fontSize: 12, color: cs.muted }}>
                 {colunista.nome}
               </span>
             </div>
@@ -1408,9 +1493,9 @@ function NavBar({
             <span
               style={{
                 fontSize: 12,
-                color: C.muted,
-                background: C.acBg,
-                border: `1px solid ${C.accent}33`,
+                color: cs.muted,
+                background: cs.acBg,
+                border: `1px solid ${cs.acA33}`,
                 padding: "3px 10px",
                 borderRadius: 3,
               }}
@@ -1426,10 +1511,10 @@ function NavBar({
               gap: 4,
               color:
                 gsStatus === "conectado"
-                  ? C.green
+                  ? cs.green
                   : gsStatus === "offline"
-                  ? C.amber
-                  : C.dim,
+                  ? cs.amber
+                  : cs.dim,
             }}
           >
             <span
@@ -1439,10 +1524,10 @@ function NavBar({
                 borderRadius: "50%",
                 background:
                   gsStatus === "conectado"
-                    ? C.green
+                    ? cs.green
                     : gsStatus === "offline"
-                    ? C.amber
-                    : C.dim,
+                    ? cs.amber
+                    : cs.dim,
                 display: "inline-block",
               }}
             />
@@ -1453,7 +1538,7 @@ function NavBar({
               : "..."}
           </span>
           <button onClick={()=>setTheme&&setTheme(t=>t==="dark"?"light":"dark")}
-            style={{background:"none",border:`1px solid ${C.faint}`,color:C.dim,borderRadius:4,cursor:"pointer",fontSize:12,padding:"4px 10px",fontFamily:"inherit"}}>
+            style={{background:"none",border:`1px solid ${cs.faint}`,color:cs.dim,borderRadius:4,cursor:"pointer",fontSize:12,padding:"4px 10px",fontFamily:"inherit"}}>
             {theme==="dark"?"☀️":"🌙"}
           </button>
           <Btn small onClick={onLogout}>
@@ -1467,19 +1552,24 @@ function NavBar({
 
 // ── Stat Card ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, color = C.text, sub }) {
+function StatCard({ label, value, color, sub }) {
+  const cs = useC();
+  const theme = useContext(ThemeCtx);
   return (
     <div
       style={{
-        background: C.s1,
-        border: `1px solid ${C.faint}`,
+        background: cs.s1,
+        border: theme === "light" ? "none" : `1px solid ${cs.faint}`,
         borderRadius: 6,
         padding: "14px 16px",
         flex: 1,
         minWidth: 100,
+        boxShadow: theme === "light" ? "0 1px 6px rgba(0,0,0,0.08)" : "none",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>
+      <div style={{ fontSize: 11, color: cs.muted, marginBottom: 6 }}>
         {label}
       </div>
       <div
@@ -1488,13 +1578,13 @@ function StatCard({ label, value, color = C.text, sub }) {
           fontWeight: 700,
           color,
           lineHeight: 1,
-          fontFamily: C.fontDestaque,
+          fontFamily: cs.fontDestaque,
         }}
       >
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{sub}</div>
+        <div style={{ fontSize: 11, color: cs.dim, marginTop: 4 }}>{sub}</div>
       )}
     </div>
   );
@@ -1504,6 +1594,8 @@ function StatCard({ label, value, color = C.text, sub }) {
 
 // ── ProfileCard ─────────────────────────────────────────────────────────
 function ProfileCard({ nome, pronomes, foto, descricao, bioLink, instagram="", twitter="", linkedin="", onEdit, editMode=false, editData, setEditData, onSave }) {
+  const cs = useC();
+  const theme = useContext(ThemeCtx);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({foto:"",descricao:"",bioLink:"",pronomes:"",instagram:"",twitter:"",linkedin:""});
 
@@ -1520,45 +1612,45 @@ function ProfileCard({ nome, pronomes, foto, descricao, bioLink, instagram="", t
   const firstName = nome?.split(" ")[0] || nome;
 
   return (
-    <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:10,padding:"20px 24px",marginBottom:20,display:"flex",gap:20,alignItems:"flex-start",position:"relative"}}>
+    <div style={{background:cs.s1,border:theme==="light"?"1px solid #E0E0E0":`1px solid ${cs.faint}`,borderRadius:10,padding:"20px 24px",marginBottom:20,display:"flex",gap:20,alignItems:"flex-start",position:"relative",boxShadow:theme==="light"?"0 1px 10px rgba(0,0,0,0.06)":"none",borderTop:theme==="light"?"3px solid transparent":undefined,backgroundImage:theme==="light"?`linear-gradient(${cs.s1}, ${cs.s1}), ${GRADIENT}`:undefined,backgroundOrigin:theme==="light"?"border-box":undefined,backgroundClip:theme==="light"?"padding-box, border-box":undefined}}>
       {/* Photo */}
-      <div style={{width:80,height:80,borderRadius:"50%",background:C.s2,border:`2px solid ${C.accent}44`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:80,height:80,borderRadius:"50%",background:cs.s2,border:`2px solid ${cs.acA44}`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
         {foto
           ?<img src={foto} alt={nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
-          :<span style={{fontSize:24,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
+          :<span style={{fontSize:24,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
         }
       </div>
       {/* Info */}
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:13,color:C.accent,marginBottom:2}}>Oi, {firstName}! 👋</div>
-        <div style={{fontSize:20,fontWeight:700,fontFamily:C.fontDestaque,color:C.text,marginBottom:2}}>{nome}</div>
-        {pronomes&&<div style={{fontSize:12,color:C.dim,marginBottom:6}}>{pronomes}</div>}
-        {descricao&&<div style={{fontSize:13,color:C.muted,marginBottom:6}}>{descricao}</div>}
+        <div style={{fontSize:13,color:cs.accent,marginBottom:2}}>Oi, {firstName}! 👋</div>
+        <div style={{fontSize:20,fontWeight:700,fontFamily:cs.fontDestaque,color:cs.text,marginBottom:2}}>{nome}</div>
+        {pronomes&&<div style={{fontSize:12,color:cs.dim,marginBottom:6}}>{pronomes}</div>}
+        {descricao&&<div style={{fontSize:13,color:cs.muted,marginBottom:6}}>{descricao}</div>}
         {bioLink&&(
           bioLink.startsWith("http")
-            ?<a href={bioLink} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>{bioLink}</a>
-            :<div style={{fontSize:12,color:C.muted,fontStyle:"italic"}}>{bioLink.slice(0,200)}{bioLink.length>200?"...":""}</div>
+            ?<a href={bioLink} target="_blank" rel="noreferrer" style={{fontSize:12,color:cs.accent,wordBreak:"break-all"}}>{bioLink}</a>
+            :<div style={{fontSize:12,color:cs.muted,fontStyle:"italic"}}>{bioLink.slice(0,200)}{bioLink.length>200?"...":""}</div>
         )}
         {(instagram||twitter||linkedin)&&(
           <div style={{display:"flex",gap:10,marginTop:6,flexWrap:"wrap"}}>
-            {instagram&&<a href={instagram.startsWith("http")?instagram:`https://instagram.com/${instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.accent}}>📷 {instagram}</a>}
-            {twitter&&<a href={twitter.startsWith("http")?twitter:`https://twitter.com/${twitter.replace("@","")}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.accent}}>𝕏 {twitter}</a>}
-            {linkedin&&<a href={linkedin.startsWith("http")?linkedin:`https://linkedin.com/in/${linkedin}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.accent}}>in {linkedin}</a>}
+            {instagram&&<a href={instagram.startsWith("http")?instagram:`https://instagram.com/${instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:cs.accent}}>📷 {instagram}</a>}
+            {twitter&&<a href={twitter.startsWith("http")?twitter:`https://twitter.com/${twitter.replace("@","")}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:cs.accent}}>𝕏 {twitter}</a>}
+            {linkedin&&<a href={linkedin.startsWith("http")?linkedin:`https://linkedin.com/in/${linkedin}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:cs.accent}}>in {linkedin}</a>}
           </div>
         )}
       </div>
       {/* Edit button */}
-      <button onClick={startEdit} style={{background:"none",border:`1px solid ${C.faint}`,color:C.dim,borderRadius:4,cursor:"pointer",fontSize:11,padding:"4px 10px",flexShrink:0}}>✎ Editar perfil</button>
+      <button onClick={startEdit} style={{background:"none",border:`1px solid ${cs.faint}`,color:cs.dim,borderRadius:4,cursor:"pointer",fontSize:11,padding:"4px 10px",flexShrink:0}}>✎ Editar perfil</button>
 
       {/* Edit modal */}
       {editing&&(
         <Modal title="Editar Perfil" onClose={()=>setEditing(false)} width={560}>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div style={{display:"flex",gap:14,alignItems:"center"}}>
-              <div style={{width:70,height:70,borderRadius:"50%",background:C.s2,border:`1px solid ${C.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <div style={{width:70,height:70,borderRadius:"50%",background:cs.s2,border:`1px solid ${cs.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 {draft.foto
                   ?<img src={draft.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  :<span style={{fontSize:20,fontWeight:700,color:C.accent}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
+                  :<span style={{fontSize:20,fontWeight:700,color:cs.accent}}>{nome?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span>
                 }
               </div>
               <div style={{flex:1}}><Label>URL da Foto (300×300)</Label>
@@ -1571,13 +1663,13 @@ function ProfileCard({ nome, pronomes, foto, descricao, bioLink, instagram="", t
             <div>
               <Label>Descrição curta (até 100 caracteres)</Label>
               <Input value={draft.descricao} onChange={v=>setDraft(d=>({...d,descricao:v.slice(0,100)}))} placeholder="Uma frase sobre você..."/>
-              <div style={{fontSize:10,color:C.dim,marginTop:3,textAlign:"right"}}>{(draft.descricao||"").length}/100</div>
+              <div style={{fontSize:10,color:cs.dim,marginTop:3,textAlign:"right"}}>{(draft.descricao||"").length}/100</div>
             </div>
             <div>
               <Label>Bio / Link de apresentação</Label>
               <textarea value={draft.bioLink} onChange={e=>setDraft(d=>({...d,bioLink:e.target.value.slice(0,1000)}))}
                 placeholder="https://... ou texto de apresentação"
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+                style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
             </div>
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1}}><Label>Instagram</Label><Input value={draft.instagram||""} onChange={v=>setDraft(d=>({...d,instagram:v}))} placeholder="@usuario ou URL"/></div>
@@ -1593,6 +1685,8 @@ function ProfileCard({ nome, pronomes, foto, descricao, bioLink, instagram="", t
 }
 
 function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, contraExtra={}, gestorProfile={}, setGestorProfile, user }) {
+  const cs = useC();
+  const theme = useContext(ThemeCtx);
   const totalTexts = texts.length;
   const entregues = texts.filter(t=>t.status==="Enviado"||t.status==="Em Revisão").length;
   const publicados = texts.filter(t=>t.status==="Publicado").length;
@@ -1668,8 +1762,8 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
         const proxFoto = proxPub ? (contraExtra[proxPub.colId]||{}).foto : null;
         return (
           <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-            <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 16px",flex:2,minWidth:200}}>
-              <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Próxima Publicação</div>
+            <div style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"12px 16px",flex:2,minWidth:200}}>
+              <div style={{fontSize:10,color:cs.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Próxima Publicação</div>
               {proxPub ? (
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   {proxFoto
@@ -1677,22 +1771,22 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                     : <Avatar sigla={proxCol?.sigla||"?"} size={36}/>
                   }
                   <div>
-                    <div style={{fontSize:13,fontWeight:700,color:C.text}}>{proxCol?.nome||proxPub.colunistaNome}</div>
-                    <div style={{fontSize:11,color:C.accent}}>{proxPub.dataPublicacao}</div>
-                    <div style={{fontSize:10,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200}}>{proxPub.titulo}</div>
+                    <div style={{fontSize:13,fontWeight:700,color:cs.text}}>{proxCol?.nome||proxPub.colunistaNome}</div>
+                    <div style={{fontSize:11,color:cs.accent}}>{proxPub.dataPublicacao}</div>
+                    <div style={{fontSize:10,color:cs.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200}}>{proxPub.titulo}</div>
                   </div>
                 </div>
-              ) : <div style={{fontSize:13,color:C.dim}}>Nenhuma agendada</div>}
+              ) : <div style={{fontSize:13,color:cs.dim}}>Nenhuma agendada</div>}
             </div>
             {[
-              {label:"Com Briefing",val:comBriefing,color:C.purple,sub:`de ${texts.length}`},
-              {label:"Link Enviado",val:comLink,color:C.green,sub:`de ${texts.length}`},
-              {label:"Colunistas Ativos",val:colAtivos,color:C.amber,sub:`de ${COLUMNISTS.length}`},
+              {label:"Com Briefing",val:comBriefing,color:cs.purple,sub:`de ${texts.length}`},
+              {label:"Link Enviado",val:comLink,color:cs.green,sub:`de ${texts.length}`},
+              {label:"Colunistas Ativos",val:colAtivos,color:cs.amber,sub:`de ${COLUMNISTS.length}`},
             ].map(({label,val,color,sub})=>(
-              <div key={label} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 16px",flex:1,minWidth:120}}>
-                <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>{label}</div>
-                <div style={{fontSize:24,fontWeight:700,fontFamily:C.fontDestaque,color}}>{val}</div>
-                <div style={{fontSize:10,color:C.dim,marginTop:2}}>{sub}</div>
+              <div key={label} style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"12px 16px",flex:1,minWidth:120}}>
+                <div style={{fontSize:10,color:cs.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>{label}</div>
+                <div style={{fontSize:24,fontWeight:700,fontFamily:cs.fontDestaque,color}}>{val}</div>
+                <div style={{fontSize:10,color:cs.dim,marginTop:2}}>{sub}</div>
               </div>
             ))}
           </div>
@@ -1701,8 +1795,8 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
       {unread.length > 0 && (
         <div
           style={{
-            background: C.acBg,
-            border: `1px solid ${C.accent}33`,
+            background: cs.acBg,
+            border: `1px solid ${cs.acA33}`,
             borderRadius: 6,
             padding: "12px 16px",
             marginBottom: 16,
@@ -1713,7 +1807,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
             gap: 8,
           }}
         >
-          <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>
+          <div style={{ fontSize: 13, color: cs.accent, fontWeight: 600 }}>
             🔔 {unread.length} nova{unread.length > 1 ? "s" : ""} notificação
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1723,16 +1817,16 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                 onClick={() => markNotifRead(n.id)}
                 style={{
                   fontSize: 11,
-                  color: C.muted,
-                  background: C.s1,
-                  border: `1px solid ${C.faint}`,
+                  color: cs.muted,
+                  background: cs.s1,
+                  border: `1px solid ${cs.faint}`,
                   borderRadius: 4,
                   padding: "4px 10px",
                   cursor: "pointer",
                 }}
               >
                 {n.mensagem.slice(0, 55)}…{" "}
-                <span style={{ color: C.accent }}>✓</span>
+                <span style={{ color: cs.accent }}>✓</span>
               </div>
             ))}
           </div>
@@ -1745,25 +1839,25 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
         <StatCard
           label="Tarefas"
           value={counts["Pendente"] || 0}
-          color={C.dim}
+          color={cs.dim}
           sub="aguardando produção"
         />
         <StatCard
           label="Enviados"
           value={counts["Enviado"] || 0}
-          color={C.amber}
+          color={cs.amber}
           sub="em fila de revisão"
         />
         <StatCard
           label="Em Revisão"
           value={counts["Em Revisão"] || 0}
-          color={C.purple}
+          color={cs.purple}
           sub="com o gestor"
         />
         <StatCard
           label="Publicados"
           value={counts["Publicado"] || 0}
-          color={C.green}
+          color={cs.green}
           sub="no ar"
         />
       </div>
@@ -1778,7 +1872,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
         />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems:"center" }}>
           <select value={colFilter} onChange={e=>setColFilter(Number(e.target.value))}
-            style={{background:C.s1,border:`1px solid ${C.b}`,color:colFilter?C.text:C.dim,padding:"5px 8px",borderRadius:4,fontSize:11,fontFamily:"inherit",cursor:"pointer"}}>
+            style={{background:cs.s1,border:`1px solid ${cs.b}`,color:colFilter?cs.text:cs.dim,padding:"5px 8px",borderRadius:4,fontSize:11,fontFamily:"inherit",cursor:"pointer"}}>
             <option value={0}>Todos colunistas</option>
             {COLUMNISTS.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
@@ -1794,9 +1888,9 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
               key={f}
               onClick={() => setFilter(f)}
               style={{
-                background: filter === f ? C.s3 : "transparent",
-                border: `1px solid ${filter === f ? C.accent + "44" : C.faint}`,
-                color: filter === f ? C.accent : C.dim,
+                background: filter === f ? cs.s3 : "transparent",
+                border: `1px solid ${filter === f ? cs.accent + "44" : cs.faint}`,
+                color: filter === f ? cs.accent : cs.dim,
                 padding: "6px 12px",
                 borderRadius: 4,
                 cursor: "pointer",
@@ -1811,20 +1905,20 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
         </div>
       </div>
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.dim }}>
+        <div style={{ textAlign: "center", padding: 40, color: cs.dim }}>
           Nenhum texto encontrado.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {filtered.map((t) => {
-            const ec = ED_COLORS[t.editoria] || C.muted;
+            const ec = ED_COLORS[t.editoria] || cs.muted;
             return (
               <div
                 key={t.id}
                 onClick={() => openDetail(t)}
                 style={{
-                  background: C.s1,
-                  border: (() => { if(!t.dataEntrega) return `1px solid ${C.faint}`; const dl=Math.ceil((new Date(t.dataEntrega)-new Date())/(1000*60*60*24)); if(dl<0) return `1px solid ${C.red}`; if(dl<=3) return `1px solid ${C.amber}`; return `1px solid ${C.faint}`; })(),
+                  background: cs.s1,
+                  border: (() => { if(!t.dataEntrega) return `1px solid ${cs.faint}`; const dl=Math.ceil((new Date(t.dataEntrega)-new Date())/(1000*60*60*24)); if(dl<0) return `1px solid ${cs.red}`; if(dl<=3) return `1px solid ${cs.amber}`; return `1px solid ${cs.faint}`; })(),
                   borderLeft: `4px solid ${ec}`,
                   borderRadius: 4,
                   padding: "12px 14px",
@@ -1837,7 +1931,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                 {(()=>{
                   const col=COLUMNISTS.find(c=>c.id===t.colId);
                   const foto=(contraExtra[t.colId]||{}).foto;
-                  if(foto) return <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${C.accent}33`}}><img src={foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
+                  if(foto) return <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${cs.acA33}`}}><img src={foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
                   return <Avatar sigla={col?.sigla||"?"} size={30}/>;
                 })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1845,7 +1939,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                     style={{
                       fontSize: 17,
                       fontWeight: 700,
-                      color: C.text,
+                      color: cs.text,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -1853,7 +1947,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                   >
                     {t.titulo}
                   </div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: cs.muted, marginTop: 2 }}>
                     {t.colunistaNome} ·{" "}
                     <span style={{ color: ec }}>{t.editoria}</span>
                   </div>
@@ -1861,7 +1955,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                     <div
                       style={{
                         fontSize: 11,
-                        color: C.dim,
+                        color: cs.dim,
                         marginTop: 2,
                         fontStyle: "italic",
                       }}
@@ -1882,7 +1976,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                   }}
                 >
                   {(t.prazo || t.dataEntrega) && (
-                    <span style={{ fontSize: 11, color: C.dim }}>
+                    <span style={{ fontSize: 11, color: cs.dim }}>
                       {t.prazo || t.dataEntrega}
                     </span>
                   )}
@@ -1911,7 +2005,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                 <div style={{ fontSize: 16, fontWeight: 700 }}>
                   {detail.titulo}
                 </div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: cs.muted, marginTop: 2 }}>
                   {detail.colunistaNome} · {detail.editoria}
                 </div>
               </div>
@@ -1935,7 +2029,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                   rel="noreferrer"
                   style={{
                     fontSize: 12,
-                    color: C.accent,
+                    color: cs.accent,
                     wordBreak: "break-all",
                   }}
                 >
@@ -1945,7 +2039,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
             )}
             <div
               style={{
-                background: C.s2,
+                background: cs.s2,
                 borderRadius: 6,
                 padding: 14,
                 display: "flex",
@@ -1953,14 +2047,14 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                 gap: 12,
               }}
             >
-              <Label c={C.accent}>Editar Tarefa</Label>
+              <Label c={cs.accent}>Editar Tarefa</Label>
               <div>
                 <Label>Briefing</Label>
                 <textarea
                   value={editField.briefing}
                   onChange={(e) => setEditField((f) => ({ ...f, briefing: e.target.value }))}
                   placeholder="Link, instruções ou contexto para o colunista..."
-                  style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
+                  style={{width:"100%",background:cs.s1,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
                 />
               </div>
               <div>
@@ -1969,7 +2063,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                   value={editField.feedback||""}
                   onChange={(e) => setEditField((f) => ({ ...f, feedback: e.target.value }))}
                   placeholder="Aprovado, precisa de ajustes, comentários..."
-                  style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
+                  style={{width:"100%",background:cs.s1,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}
                 />
               </div>
               <div style={{ display: "flex", gap: 10 }}>
@@ -2030,8 +2124,8 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
               <Label>Histórico</Label>
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
                 {[...(detail.statusHistory||[])].reverse().map((h,i)=>(
-                  <div key={i} style={{fontSize:11,color:C.dim,display:"flex",gap:8}}>
-                    <span style={{color:STATUS_CFG[h.status]?.color||C.dim,fontWeight:600}}>{h.status}</span>
+                  <div key={i} style={{fontSize:11,color:cs.dim,display:"flex",gap:8}}>
+                    <span style={{color:STATUS_CFG[h.status]?.color||cs.dim,fontWeight:600}}>{h.status}</span>
                     <span>{new Date(h.ts).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span>
                   </div>
                 ))}
@@ -2056,6 +2150,7 @@ function IdeiaTab({
   texts=[],
   updateTextStatus,
 }) {
+  const cs = useC();
   const [filter, setFilter] = useState("todas");
   const [edFilter, setEdFilter] = useState("");
   const [selected, setSelected] = useState([]);
@@ -2180,7 +2275,7 @@ function IdeiaTab({
     setSelectMode(false);
   };
 
-  const ecolor = (ed) => ED_COLORS[ed] || C.muted;
+  const ecolor = (ed) => ED_COLORS[ed] || cs.muted;
 
   return (
     <div style={{ padding: 20 }}>
@@ -2201,12 +2296,12 @@ function IdeiaTab({
               fontSize: 16,
               fontWeight: 700,
               marginBottom: 2,
-              fontFamily: C.fontDestaque,
+              fontFamily: cs.fontDestaque,
             }}
           >
             Banco de Ideias
           </div>
-          <div style={{ fontSize: 12, color: C.muted }}>
+          <div style={{ fontSize: 12, color: cs.muted }}>
             {allIdeas.length} pautas ·{" "}
             {allIdeas.filter((i) => i.status === "em tarefa").length} viraram
             tarefas
@@ -2260,9 +2355,9 @@ function IdeiaTab({
               key={f}
               onClick={() => setFilter(f)}
               style={{
-                background: filter === f ? C.s3 : "transparent",
-                border: `1px solid ${filter === f ? C.accent + "44" : C.faint}`,
-                color: filter === f ? C.accent : C.dim,
+                background: filter === f ? cs.s3 : "transparent",
+                border: `1px solid ${filter === f ? cs.accent + "44" : cs.faint}`,
+                color: filter === f ? cs.accent : cs.dim,
                 padding: "5px 12px",
                 borderRadius: 4,
                 cursor: "pointer",
@@ -2278,8 +2373,8 @@ function IdeiaTab({
       </div>
 
       {/* Suggestion Box — always visible above cards */}
-      {sugestaoOpen && <div style={{background:C.acBg,border:`2px solid ${C.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:24}}>
-        <div style={{fontSize:14,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,marginBottom:8}}>✦ Sugira uma nova pauta</div>
+      {sugestaoOpen && <div style={{background:cs.acBg,border:`2px solid ${cs.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:24}}>
+        <div style={{fontSize:14,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque,marginBottom:8}}>✦ Sugira uma nova pauta</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
           <Select value={novaCol} onChange={setNovaCol} placeholder="— colunista —"
             options={COLUMNISTS.map(c=>({value:String(c.id),label:c.nome}))}/>
@@ -2289,7 +2384,7 @@ function IdeiaTab({
         <Input value={novaPauta} onChange={setNovaPauta} placeholder="Ex: A invisibilidade bissexual nos espaços queer..." style={{marginBottom:10}}/>
         <textarea value={novaEsboco} onChange={e=>setNovaEsboco(e.target.value)}
           placeholder="Esboço: ângulo, argumento, abordagem proposta..."
-          style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:70,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",marginBottom:10}}/>
+          style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:70,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",marginBottom:10}}/>
         <Btn variant="primary" disabled={!novaCol||!novaPauta} onClick={()=>{
           if(!novaCol||!novaPauta)return;
           const col=COLUMNISTS.find(c=>c.id===Number(novaCol));
@@ -2311,18 +2406,18 @@ function IdeiaTab({
           >
             {(()=>{
               const foto=(contraExtra[col.id]||{}).foto;
-              if(foto) return <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${C.accent}44`}}><img src={foto} alt={col.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
+              if(foto) return <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:`1px solid ${cs.acA44}`}}><img src={foto} alt={col.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>;
               return <Avatar sigla={col.sigla} size={40}/>;
             })()}
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFamily: C.fontDestaque }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: cs.text, fontFamily: cs.fontDestaque }}>
                 {col.nome}
               </div>
-              <div style={{ fontSize: 11, color: C.dim }}>
+              <div style={{ fontSize: 11, color: cs.dim }}>
                 {col.pronomes} · {col.curso}
               </div>
             </div>
-            <span style={{ fontSize: 11, color: C.dim, marginLeft: "auto" }}>
+            <span style={{ fontSize: 11, color: cs.dim, marginLeft: "auto" }}>
               {ideas.length} pauta{ideas.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -2337,20 +2432,20 @@ function IdeiaTab({
               const ec = ecolor(idea.editoria);
               const cfg_st =
                 idea.status === "em tarefa"
-                  ? { color: C.green, bg: C.grBg }
+                  ? { color: cs.green, bg: cs.grBg }
                   : idea.status === "descartada"
-                  ? { color: C.red, bg: C.redBg }
+                  ? { color: cs.red, bg: cs.redBg }
                   : idea.status === "sugestão"
-                  ? { color: C.purple, bg: C.purBg }
-                  : { color: C.amber, bg: C.amBg };
+                  ? { color: cs.purple, bg: cs.purBg }
+                  : { color: cs.amber, bg: cs.amBg };
               const isSel = selected.includes(idea.key);
               return (
                 <div
                   key={idea.key}
                   onClick={() => selectMode ? toggleSel(idea.key) : openEditIdeia(idea)}
                   style={{
-                    background: isSel ? C.acBg : C.s1,
-                    border: `1px solid ${isSel ? C.accent + "66" : C.faint}`,
+                    background: isSel ? cs.acBg : cs.s1,
+                    border: `1px solid ${isSel ? cs.accent + "66" : cs.faint}`,
                     borderRadius: 6,
                     padding: 14,
                     cursor: "pointer",
@@ -2392,7 +2487,7 @@ function IdeiaTab({
                     />
                     {idea.status==="em tarefa"&&(()=>{
                       const t=texts.find(tx=>tx.key===idea.key);
-                      return t?.dataPublicacao?<span style={{fontSize:9,color:C.accent,fontWeight:600}}>📅 {t.dataPublicacao}</span>:null;
+                      return t?.dataPublicacao?<span style={{fontSize:9,color:cs.accent,fontWeight:600}}>📅 {t.dataPublicacao}</span>:null;
                     })()}
                   </div>
                   {/* Pauta */}
@@ -2400,7 +2495,7 @@ function IdeiaTab({
                     style={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: C.text,
+                      color: cs.text,
                       lineHeight: 1.5,
                     }}
                   >
@@ -2455,7 +2550,7 @@ function IdeiaTab({
                         <Btn
                           small
                           variant="danger"
-                          style={{ background: C.red, color: C.text }}
+                          style={{ background: cs.red, color: cs.text }}
                           onClick={() => setIdeaStatus(idea.key, "excluída")}
                         >
                           Excluir Definitivamente
@@ -2468,7 +2563,7 @@ function IdeiaTab({
                       style={{
                         textAlign: "center",
                         fontSize: 11,
-                        color: isSel ? C.accent : C.dim,
+                        color: isSel ? cs.accent : cs.dim,
                       }}
                     >
                       {isSel ? "✓ Selecionada" : "Clique para selecionar"}
@@ -2484,9 +2579,9 @@ function IdeiaTab({
       {/* Sugestão modal */}
       {sugestaoModal && (
         <Modal title="✦ Sugerir Nova Pauta" onClose={()=>setSugestaoModal(false)} width={580}>
-          <div style={{background:C.acBg,border:`1px solid ${C.accent}33`,borderRadius:6,padding:"12px 14px",marginBottom:16}}>
-            <div style={{fontSize:12,color:C.accent,fontWeight:700,marginBottom:2}}>Destaque para uma nova ideia</div>
-            <div style={{fontSize:12,color:C.muted}}>A pauta vai para o banco com status "sugestão", visível para o gestor.</div>
+          <div style={{background:cs.acBg,border:`1px solid ${cs.acA33}`,borderRadius:6,padding:"12px 14px",marginBottom:16}}>
+            <div style={{fontSize:12,color:cs.accent,fontWeight:700,marginBottom:2}}>Destaque para uma nova ideia</div>
+            <div style={{fontSize:12,color:cs.muted}}>A pauta vai para o banco com status "sugestão", visível para o gestor.</div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div><Label>Colunista</Label>
@@ -2502,7 +2597,7 @@ function IdeiaTab({
             <div><Label>Esboço / Descrição da pauta</Label>
               <textarea value={novaEsboco} onChange={e=>setNovaEsboco(e.target.value)}
                 placeholder="Ângulo, argumento principal, abordagem proposta..."
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+                style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
             </div>
             <Btn variant="primary" disabled={!novaCol||!novaPauta} onClick={()=>{
               if(!novaCol||!novaPauta)return;
@@ -2525,6 +2620,7 @@ function ContrapartidasTab({
   contraExtra,
   setContraExtra,
 }) {
+  const cs = useC();
   const [editCol, setEditCol] = useState(null);
   const [editData, setEditData] = useState({
     foto: "",
@@ -2571,12 +2667,12 @@ function ContrapartidasTab({
               fontSize: 16,
               fontWeight: 700,
               marginBottom: 2,
-              fontFamily: C.fontDestaque,
+              fontFamily: cs.fontDestaque,
             }}
           >
             Gestão de Contrapartidas
           </div>
-          <div style={{ fontSize: 12, color: C.muted }}>
+          <div style={{ fontSize: 12, color: cs.muted }}>
             {done}/{total} itens concluídos ({Math.round((done / total) * 100)}
             %)
           </div>
@@ -2586,7 +2682,7 @@ function ContrapartidasTab({
             height: 4,
             flex: 1,
             maxWidth: 300,
-            background: C.faint,
+            background: cs.faint,
             borderRadius: 2,
           }}
         >
@@ -2594,7 +2690,7 @@ function ContrapartidasTab({
             style={{
               height: "100%",
               width: `${(done / total) * 100}%`,
-              background: C.green,
+              background: cs.green,
               borderRadius: 2,
               transition: "width 0.5s",
             }}
@@ -2619,8 +2715,8 @@ function ContrapartidasTab({
             <div
               key={col.id}
               style={{
-                background: C.s1,
-                border: `1px solid ${allDone ? C.green + "44" : C.faint}`,
+                background: cs.s1,
+                border: `1px solid ${allDone ? cs.green + "44" : cs.faint}`,
                 borderRadius: 8,
                 overflow: "hidden",
               }}
@@ -2639,8 +2735,8 @@ function ContrapartidasTab({
                     width: 60,
                     height: 60,
                     borderRadius: 6,
-                    background: C.s2,
-                    border: `1px solid ${C.faint}`,
+                    background: cs.s2,
+                    border: `1px solid ${cs.faint}`,
                     overflow: "hidden",
                     flexShrink: 0,
                     display: "flex",
@@ -2661,7 +2757,7 @@ function ContrapartidasTab({
                     />
                   ) : (
                     <span
-                      style={{ fontSize: 18, fontWeight: 700, color: C.accent }}
+                      style={{ fontSize: 18, fontWeight: 700, color: cs.accent }}
                     >
                       {col.sigla}
                     </span>
@@ -2672,18 +2768,18 @@ function ContrapartidasTab({
                     style={{
                       fontSize: 13,
                       fontWeight: 700,
-                      color: allDone ? C.green : C.text,
+                      color: allDone ? cs.green : cs.text,
                     }}
                   >
                     {col.nome}
                   </div>
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: cs.dim, marginTop: 2 }}>
                     {col.pronomes}
                   </div>
                   <div
                     style={{
                       fontSize: 11,
-                      color: C.green,
+                      color: cs.green,
                       marginTop: 4,
                       fontWeight: 600,
                     }}
@@ -2695,8 +2791,8 @@ function ContrapartidasTab({
                   onClick={() => openEdit(col)}
                   style={{
                     background: "none",
-                    border: `1px solid ${C.faint}`,
-                    color: C.dim,
+                    border: `1px solid ${cs.faint}`,
+                    color: cs.dim,
                     borderRadius: 4,
                     cursor: "pointer",
                     fontSize: 11,
@@ -2715,11 +2811,11 @@ function ContrapartidasTab({
                     onClick={() => toggleContrapartida(col.id, t.key)}
                     style={{
                       flex: 1,
-                      background: cp[t.key] ? C.grBg : C.s2,
+                      background: cp[t.key] ? cs.grBg : cs.s2,
                       border: `1px solid ${
-                        cp[t.key] ? C.green + "44" : C.faint
+                        cp[t.key] ? cs.green + "44" : cs.faint
                       }`,
-                      color: cp[t.key] ? C.green : C.dim,
+                      color: cp[t.key] ? cs.green : cs.dim,
                       borderRadius: 4,
                       cursor: "pointer",
                       padding: "6px 4px",
@@ -2741,7 +2837,7 @@ function ContrapartidasTab({
                     <div
                       style={{
                         fontSize: 11,
-                        color: C.muted,
+                        color: cs.muted,
                         fontStyle: "italic",
                         marginBottom: 4,
                       }}
@@ -2751,7 +2847,7 @@ function ContrapartidasTab({
                     </div>
                   )}
                   {ex.obs && (
-                    <div style={{ fontSize: 11, color: C.dim }}>
+                    <div style={{ fontSize: 11, color: cs.dim }}>
                       {ex.obs.slice(0, 60)}
                       {ex.obs.length > 60 ? "..." : ""}
                     </div>
@@ -2787,7 +2883,7 @@ function ContrapartidasTab({
                     objectFit: "cover",
                     borderRadius: 6,
                     marginTop: 8,
-                    border: `1px solid ${C.faint}`,
+                    border: `1px solid ${cs.faint}`,
                   }}
                 />
               )}
@@ -2802,9 +2898,9 @@ function ContrapartidasTab({
                 placeholder="Breve descrição do colunista..."
                 style={{
                   width: "100%",
-                  background: C.s2,
-                  border: `1px solid ${C.b}`,
-                  color: C.text,
+                  background: cs.s2,
+                  border: `1px solid ${cs.b}`,
+                  color: cs.text,
                   padding: "9px 12px",
                   borderRadius: 4,
                   fontSize: 13,
@@ -2826,9 +2922,9 @@ function ContrapartidasTab({
                 placeholder="Notas internas, avisos, acordos..."
                 style={{
                   width: "100%",
-                  background: C.s2,
-                  border: `1px solid ${C.b}`,
-                  color: C.text,
+                  background: cs.s2,
+                  border: `1px solid ${cs.b}`,
+                  color: cs.text,
                   padding: "9px 12px",
                   borderRadius: 4,
                   fontSize: 13,
@@ -2859,6 +2955,7 @@ function ContrapartidasTab({
 
 // ── GESTOR: Calendário ──────────────────────────────────────────────────
 function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
+  const cs = useC();
   const START_YEAR = 2026;
   const START_MONTH = 5;
   const months12 = Array.from({ length: 12 }, (_, i) => {
@@ -2941,12 +3038,12 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
           fontSize: 16,
           fontWeight: 700,
           marginBottom: 4,
-          fontFamily: C.fontDestaque,
+          fontFamily: cs.fontDestaque,
         }}
       >
         Calendário Editorial
       </div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: cs.muted, marginBottom: 14 }}>
         A partir de 15 de junho de 2026
       </div>
       <div
@@ -2966,16 +3063,16 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               key={i}
               onClick={() => setViewIdx(i)}
               style={{
-                background: viewIdx === i ? C.acBg : "transparent",
+                background: viewIdx === i ? cs.acBg : "transparent",
                 border: `1px solid ${
-                  viewIdx === i ? C.accent + "44" : C.faint
+                  viewIdx === i ? cs.accent + "44" : cs.faint
                 }`,
                 color:
                   viewIdx === i
-                    ? C.accent
+                    ? cs.accent
                     : hasPautas || hasTexts
-                    ? C.text
-                    : C.dim,
+                    ? cs.text
+                    : cs.dim,
                 borderRadius: 4,
                 cursor: "pointer",
                 padding: "7px 12px",
@@ -2988,7 +3085,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               {m.label}
               {(()=>{
                 const cnt=texts.filter(t=>t.dataPublicacao&&t.dataPublicacao.startsWith(m.key)).length;
-                return cnt>0?<span style={{fontSize:9,background:C.accent+"33",color:C.accent,borderRadius:10,padding:"1px 5px",marginLeft:4,fontWeight:700}}>{cnt}</span>:null;
+                return cnt>0?<span style={{fontSize:9,background:cs.accent+"33",color:cs.accent,borderRadius:10,padding:"1px 5px",marginLeft:4,fontWeight:700}}>{cnt}</span>:null;
               })()}
             </button>
           );
@@ -2999,9 +3096,9 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
         style={{
           fontSize: 14,
           fontWeight: 700,
-          color: C.accent,
+          color: cs.accent,
           marginBottom: 16,
-          fontFamily: C.fontDestaque,
+          fontFamily: cs.fontDestaque,
         }}
       >
         {cur.fullLabel}
@@ -3022,29 +3119,29 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
           </Btn>
         </div>
           {mPautas.length === 0 ? (
-            <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
+            <div style={{ fontSize: 12, color: cs.dim, padding: "16px 0" }}>
               Nenhuma pauta agendada.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {mPautas.map((p, i) => (
-                <div key={i} style={{background:p._fromText?C.s1:C.s2,border:`1px solid ${p._fromText?(STATUS_CFG[p.status]?.color||C.accent)+"33":C.faint}`,borderRadius:4,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
+                <div key={i} style={{background:p._fromText?cs.s1:cs.s2,border:`1px solid ${p._fromText?(STATUS_CFG[p.status]?.color||cs.accent)+"33":cs.faint}`,borderRadius:4,padding:"10px 12px",display:"flex",gap:10,alignItems:"flex-start"}}>
                   <Avatar sigla={COLUMNISTS.find((c) => c.id === p.colId)?.sigla || "?"} size={26}/>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom:3 }}>{p.pauta}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: cs.text, marginBottom:3 }}>{p.pauta}</div>
                     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
-                      <span style={{ fontSize: 11, color: C.dim }}>{p.nome}</span>
+                      <span style={{ fontSize: 11, color: cs.dim }}>{p.nome}</span>
                       {p.status&&<StatusBadge status={p.status}/>}
                     </div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                      {p.dataEntrega&&<span style={{fontSize:10,color:C.amber}}>📝 Entrega: {new Date(p.dataEntrega).toLocaleDateString("pt-BR")}</span>}
-                      {p.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🚀 Pub: {new Date(p.dataPublicacao).toLocaleDateString("pt-BR")}</span>}
-                      {p.horario&&!p.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🕐 {cur.fullLabel} às {p.horario}</span>}
+                      {p.dataEntrega&&<span style={{fontSize:10,color:cs.amber}}>📝 Entrega: {new Date(p.dataEntrega).toLocaleDateString("pt-BR")}</span>}
+                      {p.dataPublicacao&&<span style={{fontSize:10,color:cs.accent}}>🚀 Pub: {new Date(p.dataPublicacao).toLocaleDateString("pt-BR")}</span>}
+                      {p.horario&&!p.dataPublicacao&&<span style={{fontSize:10,color:cs.accent}}>🕐 {cur.fullLabel} às {p.horario}</span>}
                     </div>
-                    {p.link&&<a href={p.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.purple,display:"block",marginTop:3,wordBreak:"break-all"}}>{p.link}</a>}
+                    {p.link&&<a href={p.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:cs.purple,display:"block",marginTop:3,wordBreak:"break-all"}}>{p.link}</a>}
                   </div>
                   {!p._fromText&&(
-                    <button onClick={() => removePauta(i)} style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:14,flexShrink:0}}>×</button>
+                    <button onClick={() => removePauta(i)} style={{background:"none",border:"none",color:cs.dim,cursor:"pointer",fontSize:14,flexShrink:0}}>×</button>
                   )}
                 </div>
               ))}
@@ -3057,7 +3154,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
           Colunistas disponíveis em {cur.fullLabel} ({availCols.length})
         </Label>
         {availCols.length === 0 ? (
-          <div style={{ fontSize: 12, color: C.dim }}>
+          <div style={{ fontSize: 12, color: cs.dim }}>
             Ninguém indicou preferência por este mês.
           </div>
         ) : (
@@ -3069,8 +3166,8 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
-                  background: C.s1,
-                  border: `1px solid ${C.faint}`,
+                  background: cs.s1,
+                  border: `1px solid ${cs.faint}`,
                   borderRadius: 4,
                   padding: "8px 12px",
                 }}
@@ -3120,14 +3217,14 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
                       onClick={() => setNewPauta(p)}
                       style={{
                         padding: "6px 10px",
-                        background: newPauta === p ? C.acBg : C.s2,
+                        background: newPauta === p ? cs.acBg : cs.s2,
                         border: `1px solid ${
-                          newPauta === p ? C.accent + "44" : C.faint
+                          newPauta === p ? cs.accent + "44" : cs.faint
                         }`,
                         borderRadius: 4,
                         cursor: "pointer",
                         fontSize: 12,
-                        color: newPauta === p ? C.accent : C.text,
+                        color: newPauta === p ? cs.accent : cs.text,
                       }}
                     >
                       {p}
@@ -3160,6 +3257,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
 
 // ── GESTOR: Colunistas ──────────────────────────────────────────────────
 function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
+  const cs = useC();
   const [edFilterCol, setEdFilterCol] = useState("");
   const [search, setSearch] = useState("");
   const [profile, setProfile] = useState(null);
@@ -3188,7 +3286,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
         <Input value={search} onChange={setSearch} placeholder="Buscar colunista ou instituição..." style={{flex:1,minWidth:200}}/>
         <select value={edFilterCol||""} onChange={e=>setEdFilterCol(e.target.value)}
-          style={{background:C.s1,border:`1px solid ${C.b}`,color:(edFilterCol||"")?C.text:C.dim,padding:"8px 12px",borderRadius:4,fontSize:12,fontFamily:"inherit",cursor:"pointer"}}>
+          style={{background:cs.s1,border:`1px solid ${cs.b}`,color:(edFilterCol||"")?cs.text:cs.dim,padding:"8px 12px",borderRadius:4,fontSize:12,fontFamily:"inherit",cursor:"pointer"}}>
           <option value="">Todas editorias</option>
           {EDITORIAS.map(e=><option key={e} value={e}>{e}</option>)}
         </select>
@@ -3200,40 +3298,40 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
           const ex = contraExtra[col.id] || {};
           return (
             <div key={col.id} onClick={()=>openProfile(col)}
-              style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:8,overflow:"hidden",cursor:"pointer",transition:"border-color 0.15s"}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent+"44"}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=C.faint}>
+              style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:8,overflow:"hidden",cursor:"pointer",transition:"border-color 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=cs.accent+"44"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=cs.faint}>
               <div style={{display:"flex",gap:12,padding:"16px 14px 12px",alignItems:"center"}}>
-                <div style={{width:56,height:56,borderRadius:"50%",background:C.s2,border:`1px solid ${C.accent}33`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{width:56,height:56,borderRadius:"50%",background:cs.s2,border:`1px solid ${cs.acA33}`,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                   {ex.foto ? (
                     <img src={ex.foto} alt={col.nome} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={(e)=>(e.target.style.display="none")}/>
                   ) : (
-                    <span style={{fontSize:16,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{col.sigla}</span>
+                    <span style={{fontSize:16,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque}}>{col.sigla}</span>
                   )}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.nome}</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:2}}>{col.pronomes}</div>
-                  <div style={{fontSize:11,color:C.muted,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.curso}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:cs.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.nome}</div>
+                  <div style={{fontSize:11,color:cs.dim,marginTop:2}}>{col.pronomes}</div>
+                  <div style={{fontSize:11,color:cs.muted,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{col.curso}</div>
                 </div>
               </div>
-              <div style={{display:"flex",borderTop:`1px solid ${C.faint}`}}>
-                <div style={{flex:1,padding:"8px 0",textAlign:"center",borderRight:`1px solid ${C.faint}`}}>
-                  <div style={{fontSize:16,fontWeight:700,color:C.text,fontFamily:C.fontDestaque}}>{myTexts.length}</div>
-                  <div style={{fontSize:10,color:C.dim}}>envios</div>
+              <div style={{display:"flex",borderTop:`1px solid ${cs.faint}`}}>
+                <div style={{flex:1,padding:"8px 0",textAlign:"center",borderRight:`1px solid ${cs.faint}`}}>
+                  <div style={{fontSize:16,fontWeight:700,color:cs.text,fontFamily:cs.fontDestaque}}>{myTexts.length}</div>
+                  <div style={{fontSize:10,color:cs.dim}}>envios</div>
                 </div>
                 <div style={{flex:1,padding:"8px 0",textAlign:"center"}}>
-                  <div style={{fontSize:16,fontWeight:700,color:C.green,fontFamily:C.fontDestaque}}>{pub}</div>
-                  <div style={{fontSize:10,color:C.dim}}>publicados</div>
+                  <div style={{fontSize:16,fontWeight:700,color:cs.green,fontFamily:cs.fontDestaque}}>{pub}</div>
+                  <div style={{fontSize:10,color:cs.dim}}>publicados</div>
                 </div>
               </div>
-              <div style={{padding:"10px 14px",borderTop:`1px solid ${C.faint}`,display:"flex",flexWrap:"wrap",gap:4}}>
+              <div style={{padding:"10px 14px",borderTop:`1px solid ${cs.faint}`,display:"flex",flexWrap:"wrap",gap:4}}>
                 {col.editorias.map((e,i)=>{
-                  const ec=ED_COLORS[e]||C.muted;
+                  const ec=ED_COLORS[e]||cs.muted;
                   return <span key={i} style={{fontSize:9,color:ec,background:ec+"18",border:`1px solid ${ec}33`,padding:"2px 7px",borderRadius:3}}>{e.split(":")[0].split(",")[0]}</span>;
                 })}
               </div>
-              {ex.descricao&&<div style={{padding:"0 14px 12px",fontSize:11,color:C.dim,fontStyle:"italic"}}>{ex.descricao.slice(0,100)}{ex.descricao.length>100?"...":""}</div>}
+              {ex.descricao&&<div style={{padding:"0 14px 12px",fontSize:11,color:cs.dim,fontStyle:"italic"}}>{ex.descricao.slice(0,100)}{ex.descricao.length>100?"...":""}</div>}
               {/* Demandas ativas */}
               {(()=>{
                 const pendentes=myTexts.filter(t=>t.status!=="Publicado"&&t.status!=="Rejeitado");
@@ -3242,23 +3340,23 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
                 const atrasados=pendentes.filter(t=>t.dataEntrega&&Math.ceil((new Date(t.dataEntrega)-new Date())/(1000*60*60*24))<0).length;
                 if(pendentes.length===0&&bfs.length===0) return null;
                 return(
-                  <div style={{padding:"8px 14px 12px",borderTop:`1px solid ${C.faint}`}}>
+                  <div style={{padding:"8px 14px 12px",borderTop:`1px solid ${cs.faint}`}}>
                     <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                      <div style={{fontSize:10,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase"}}>Demandas ativas</div>
-                      {proxPub&&<div style={{fontSize:10,color:C.accent}}>📅 {proxPub.dataPublicacao}</div>}
-                      {atrasados>0&&<div style={{fontSize:10,color:C.red,fontWeight:700}}>⚠ {atrasados} atrasad{atrasados>1?"as":"a"}</div>}
+                      <div style={{fontSize:10,color:cs.muted,letterSpacing:"0.1em",textTransform:"uppercase"}}>Demandas ativas</div>
+                      {proxPub&&<div style={{fontSize:10,color:cs.accent}}>📅 {proxPub.dataPublicacao}</div>}
+                      {atrasados>0&&<div style={{fontSize:10,color:cs.red,fontWeight:700}}>⚠ {atrasados} atrasad{atrasados>1?"as":"a"}</div>}
                     </div>
                     {bfs.map((b,i)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                        <div style={{fontSize:11,color:C.purple,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📋 {b.editoria}</div>
-                        {b.dataPublicacao&&<div style={{fontSize:10,color:C.accent,flexShrink:0,marginLeft:6}}>Pub: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
-                        {b.dataEntrega&&<div style={{fontSize:10,color:C.amber,flexShrink:0,marginLeft:6}}>Ent: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
+                        <div style={{fontSize:11,color:cs.purple,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📋 {b.editoria}</div>
+                        {b.dataPublicacao&&<div style={{fontSize:10,color:cs.accent,flexShrink:0,marginLeft:6}}>Pub: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
+                        {b.dataEntrega&&<div style={{fontSize:10,color:cs.amber,flexShrink:0,marginLeft:6}}>Ent: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
                       </div>
                     ))}
                     {pendentes.map((t,i)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                        <div style={{fontSize:11,color:C.amber,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>✎ {t.titulo}</div>
-                        <div style={{fontSize:10,color:STATUS_CFG[t.status]?.color||C.muted,flexShrink:0,marginLeft:6}}>{t.status}</div>
+                        <div style={{fontSize:11,color:cs.amber,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>✎ {t.titulo}</div>
+                        <div style={{fontSize:10,color:STATUS_CFG[t.status]?.color||cs.muted,flexShrink:0,marginLeft:6}}>{t.status}</div>
                       </div>
                     ))}
                   </div>
@@ -3276,33 +3374,33 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
             {/* Photo + info */}
             <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
               <div style={{flexShrink:0}}>
-                <div style={{width:100,height:100,borderRadius:8,background:C.s2,border:`1px solid ${C.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8}}>
+                <div style={{width:100,height:100,borderRadius:8,background:cs.s2,border:`1px solid ${cs.faint}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8}}>
                   {editData.foto
                     ?<img src={editData.foto} alt={profile.nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    :<span style={{fontSize:28,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque}}>{profile.sigla}</span>
+                    :<span style={{fontSize:28,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque}}>{profile.sigla}</span>
                   }
                 </div>
                 {editData.foto&&(
                   <a href={editData.foto} download={`${profile.nome.replace(/ /g,"_")}.jpg`} target="_blank" rel="noreferrer"
-                    style={{fontSize:10,color:C.accent,display:"block",textAlign:"center",textDecoration:"none"}}>
+                    style={{fontSize:10,color:cs.accent,display:"block",textAlign:"center",textDecoration:"none"}}>
                     ⬇ Download foto
                   </a>
                 )}
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:18,fontWeight:700,fontFamily:C.fontDestaque,color:C.text,marginBottom:4}}>{profile.nome}</div>
-                <div style={{fontSize:12,color:C.dim,marginBottom:2}}>{profile.pronomes} · {profile.email}</div>
-                <div style={{fontSize:12,color:C.muted,marginBottom:8}}>{profile.curso}</div>
+                <div style={{fontSize:18,fontWeight:700,fontFamily:cs.fontDestaque,color:cs.text,marginBottom:4}}>{profile.nome}</div>
+                <div style={{fontSize:12,color:cs.dim,marginBottom:2}}>{profile.pronomes} · {profile.email}</div>
+                <div style={{fontSize:12,color:cs.muted,marginBottom:8}}>{profile.curso}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                   {profile.editorias.map((e,i)=>{
-                    const ec=ED_COLORS[e]||C.muted;
+                    const ec=ED_COLORS[e]||cs.muted;
                     return <span key={i} style={{fontSize:9,color:ec,background:ec+"18",border:`1px solid ${ec}33`,padding:"2px 7px",borderRadius:3}}>{e.split(",")[0]}</span>;
                   })}
                 </div>
               </div>
             </div>
 
-            <div style={{height:1,background:C.faint}}/>
+            <div style={{height:1,background:cs.faint}}/>
 
             {/* Edit fields */}
             <div><Label>URL da Foto (300×300)</Label>
@@ -3311,20 +3409,20 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
             <div>
               <Label>Descrição curta (até 100 caracteres)</Label>
               <Input value={editData.descricao} onChange={v=>setEditData(d=>({...d,descricao:v.slice(0,100)}))} placeholder="Bio curta do colunista..."/>
-              <div style={{fontSize:10,color:C.dim,marginTop:4,textAlign:"right"}}>{(editData.descricao||"").length}/100</div>
+              <div style={{fontSize:10,color:cs.dim,marginTop:4,textAlign:"right"}}>{(editData.descricao||"").length}/100</div>
             </div>
             <div>
               <Label>Link de Bio (até 1000 caracteres)</Label>
               <textarea value={editData.bioLink} onChange={e=>setEditData(d=>({...d,bioLink:e.target.value.slice(0,1000)}))}
                 placeholder="https://... ou texto de apresentação completa"
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
-              <div style={{fontSize:10,color:C.dim,marginTop:4,textAlign:"right"}}>{(editData.bioLink||"").length}/1000</div>
+                style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+              <div style={{fontSize:10,color:cs.dim,marginTop:4,textAlign:"right"}}>{(editData.bioLink||"").length}/1000</div>
             </div>
             <div>
               <Label>Observações internas</Label>
               <textarea value={editData.obs} onChange={e=>setEditData(d=>({...d,obs:e.target.value}))}
                 placeholder="Notas, acordos, avisos internos..."
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+                style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
             </div>
             <div style={{display:"flex",gap:8}}>
               <Btn variant="primary" onClick={saveProfile}>Salvar perfil</Btn>
@@ -3339,6 +3437,7 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
 function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[], updateTextStatus }) {
+  const cs = useC();
   const myTotal = texts.filter(t=>t.colId===colunista?.id).length;
   const myEntregues = texts.filter(t=>t.colId===colunista?.id&&(t.status==="Enviado"||t.status==="Em Revisão"||t.status==="Publicado")).length;
   const [titulo, setTitulo] = useState("");
@@ -3387,41 +3486,41 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
         onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
       {myTotal > 0 && (
-        <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
+        <div style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,color:C.dim,marginBottom:4}}>{myEntregues} de {myTotal} textos entregues</div>
-            <div style={{background:C.s2,borderRadius:4,height:6,overflow:"hidden"}}>
-              <div style={{width:`${myTotal?(myEntregues/myTotal*100):0}%`,background:C.green,height:"100%",transition:"width 0.3s"}}/>
+            <div style={{fontSize:11,color:cs.dim,marginBottom:4}}>{myEntregues} de {myTotal} textos entregues</div>
+            <div style={{background:cs.s2,borderRadius:4,height:6,overflow:"hidden"}}>
+              <div style={{width:`${myTotal?(myEntregues/myTotal*100):0}%`,background:cs.green,height:"100%",transition:"width 0.3s"}}/>
             </div>
           </div>
-          <div style={{fontSize:18,fontWeight:700,fontFamily:C.fontDestaque,color:C.green}}>{myTotal?Math.round(myEntregues/myTotal*100):0}%</div>
+          <div style={{fontSize:18,fontWeight:700,fontFamily:cs.fontDestaque,color:cs.green}}>{myTotal?Math.round(myEntregues/myTotal*100):0}%</div>
         </div>
       )}
       {myTexts.length > 0 && (
         <div style={{marginBottom:20}}>
-          <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:10,color:C.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Suas Tarefas</div>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:cs.fontDestaque,marginBottom:10,color:cs.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Suas Tarefas</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {myTexts.map(t=>{
               const open=expandedId===t.id;
               return(
                 <div key={t.id} onClick={()=>setExpandedId(open?null:t.id)}
-                  style={{background:C.s1,border:`1px solid ${open?C.accent+"44":C.faint}`,borderRadius:6,cursor:"pointer",overflow:"hidden"}}>
+                  style={{background:cs.s1,border:`1px solid ${open?cs.accent+"44":cs.faint}`,borderRadius:6,cursor:"pointer",overflow:"hidden"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px"}}>
                     <div style={{flex:1,paddingRight:8}}>
                       <div style={{fontSize:13,fontWeight:600}}>{t.titulo}</div>
-                      {t.dataEntrega&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
+                      {t.dataEntrega&&<div style={{fontSize:11,color:cs.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <StatusBadge status={t.status}/>
-                      <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                      <span style={{fontSize:10,color:cs.dim}}>{open?"▲":"▼"}</span>
                     </div>
                   </div>
                   {open&&(
-                    <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{borderTop:`1px solid ${cs.faint}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
                       <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11,color:C.dim}}>{t.editoria}</span>
-                        {t.dataEntrega&&<span style={{fontSize:11,color:C.dim}}>Entrega: {t.dataEntrega}</span>}
-                        {t.dataPublicacao&&<span style={{fontSize:11,color:C.dim}}>Publicação: {t.dataPublicacao}</span>}
+                        <span style={{fontSize:11,color:cs.dim}}>{t.editoria}</span>
+                        {t.dataEntrega&&<span style={{fontSize:11,color:cs.dim}}>Entrega: {t.dataEntrega}</span>}
+                        {t.dataPublicacao&&<span style={{fontSize:11,color:cs.dim}}>Publicação: {t.dataPublicacao}</span>}
                       </div>
                       <div style={{display:"flex",flexDirection:"column",gap:4}}>
                         <Label>Briefing</Label>
@@ -3430,21 +3529,21 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                           onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
                           onClick={e=>e.stopPropagation()}
                           placeholder="Link, instruções ou contexto..."
-                          style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
+                          style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
                         />
-                        <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                        <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:cs.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
                       </div>
-                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
-                    {t.feedback&&<div style={{fontSize:12,background:C.purBg,border:`1px solid ${C.purple}33`,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.purple,fontWeight:600}}>Feedback: </span><span style={{color:C.muted}}>{t.feedback}</span></div>}
-                      {t.feedback&&<div style={{fontSize:12,background:C.purBg,border:`1px solid ${C.purple}33`,borderRadius:4,padding:"8px 10px"}}><span style={{color:C.purple,fontWeight:600}}>Feedback: </span><span style={{color:C.muted}}>{t.feedback}</span></div>}
-                      <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                      {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:cs.dim}}>{t.obs}</div>}
+                    {t.feedback&&<div style={{fontSize:12,background:cs.purBg,border:`1px solid ${cs.purA33}`,borderRadius:4,padding:"8px 10px"}}><span style={{color:cs.purple,fontWeight:600}}>Feedback: </span><span style={{color:cs.muted}}>{t.feedback}</span></div>}
+                      {t.feedback&&<div style={{fontSize:12,background:cs.purBg,border:`1px solid ${cs.purA33}`,borderRadius:4,padding:"8px 10px"}}><span style={{color:cs.purple,fontWeight:600}}>Feedback: </span><span style={{color:cs.muted}}>{t.feedback}</span></div>}
+                      <div style={{background:cs.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
                         <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <input
                             value={linkEdit[t.id]??t.link??""}
                             onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
                             onClick={e=>e.stopPropagation()}
                             placeholder="Cole o link do seu texto (Google Docs, Drive...)"
-                            style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                            style={{flex:1,background:cs.s1,border:`1px solid ${cs.b}`,color:cs.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
                           />
                           <button
                             onClick={e=>{
@@ -3453,10 +3552,10 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                               if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
                               setLinkEdit(p=>({...p,[t.id]:undefined}));
                             }}
-                            style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                            style={{background:cs.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
                           >Salvar link</button>
                         </div>
-                        {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:C.accent,wordBreak:"break-all"}}>{t.link}</a>}
+                        {t.link&&(linkEdit[t.id]===undefined)&&<a href={t.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:cs.accent,wordBreak:"break-all"}}>{t.link}</a>}
                         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                           {[{s:"Pendente",label:"Pendente"},{s:"Enviado",label:"Texto entregue"},{s:"Publicado",label:"Publicado"}].map(({s,label})=>{
                             const cfg=STATUS_CFG[s]||{};
@@ -3464,7 +3563,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                             return(
                               <button key={s}
                                 onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
-                                style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                                style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":cs.b}`,color:active?cfg.color:cs.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
                               >{label}</button>
                             );
                           })}
@@ -3494,12 +3593,12 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                   fontSize: 16,
                   fontWeight: 700,
                   marginBottom: 4,
-                  fontFamily: C.fontDestaque,
+                  fontFamily: cs.fontDestaque,
                 }}
               >
                 Enviar Texto
               </div>
-              <div style={{ fontSize: 12, color: C.muted }}>
+              <div style={{ fontSize: 12, color: cs.muted }}>
                 Preencha os dados e clique em enviar.
               </div>
             </div>
@@ -3510,13 +3609,13 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
           {sent && (
             <div
               style={{
-                background: C.grBg,
-                border: `1px solid ${C.green}44`,
+                background: cs.grBg,
+                border: `1px solid ${cs.grA44}`,
                 borderRadius: 6,
                 padding: "12px 16px",
                 marginBottom: 16,
                 fontSize: 13,
-                color: C.green,
+                color: cs.green,
                 fontWeight: 600,
               }}
             >
@@ -3568,9 +3667,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                 placeholder="Notas adicionais..."
                 style={{
                   width: "100%",
-                  background: C.s2,
-                  border: `1px solid ${C.b}`,
-                  color: C.text,
+                  background: cs.s2,
+                  border: `1px solid ${cs.b}`,
+                  color: cs.text,
                   padding: "9px 12px",
                   borderRadius: 4,
                   fontSize: 13,
@@ -3590,7 +3689,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
               >
                 Enviar Texto
               </Btn>
-              <span style={{ fontSize: 11, color: C.dim, alignSelf: "center" }}>
+              <span style={{ fontSize: 11, color: cs.dim, alignSelf: "center" }}>
                 * obrigatórios
               </span>
             </div>
@@ -3599,9 +3698,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
             style={{
               marginTop: 24,
               padding: 16,
-              background: C.s2,
+              background: cs.s2,
               borderRadius: 6,
-              border: `1px solid ${C.faint}`,
+              border: `1px solid ${cs.faint}`,
             }}
           >
             <Label>Suas pautas sugeridas na seleção</Label>
@@ -3619,8 +3718,8 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                   cursor: "pointer",
                 }}
               >
-                <span style={{ color: C.accent, flexShrink: 0 }}>→</span>
-                <span style={{ fontSize: 12, color: C.muted }}>{p}</span>
+                <span style={{ color: cs.accent, flexShrink: 0 }}>→</span>
+                <span style={{ fontSize: 12, color: cs.muted }}>{p}</span>
               </div>
             ))}
           </div>
@@ -3641,12 +3740,12 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                   fontSize: 16,
                   fontWeight: 700,
                   marginBottom: 4,
-                  fontFamily: C.fontDestaque,
+                  fontFamily: cs.fontDestaque,
                 }}
               >
                 Sugerir Nova Pauta
               </div>
-              <div style={{ fontSize: 12, color: C.muted }}>
+              <div style={{ fontSize: 12, color: cs.muted }}>
                 Sua sugestão vai para o Banco de Ideias da gestão.
               </div>
             </div>
@@ -3675,9 +3774,9 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                 placeholder="Descreva sua ideia de pauta..."
                 style={{
                   width: "100%",
-                  background: C.s2,
-                  border: `1px solid ${C.b}`,
-                  color: C.text,
+                  background: cs.s2,
+                  border: `1px solid ${cs.b}`,
+                  color: cs.text,
                   padding: "9px 12px",
                   borderRadius: 4,
                   fontSize: 13,
@@ -3716,6 +3815,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
 
 // ── COLUNISTA: Meus Textos ──────────────────────────────────────────────
 function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updateTextStatus }) {
+  const cs = useC();
   const [expandedId, setExpandedId] = useState(null);
   const [linkEdit, setLinkEdit] = useState({});
   const pub = texts.filter((t) => t.status === "Publicado").length;
@@ -3737,11 +3837,11 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
         style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}
       >
         <StatCard label="Total enviados" value={texts.length} />
-        <StatCard label="Publicados" value={pub} color={C.green} />
-        <StatCard label="Em andamento" value={pen} color={C.amber} />
+        <StatCard label="Publicados" value={pub} color={cs.green} />
+        <StatCard label="Em andamento" value={pen} color={cs.amber} />
       </div>
       {texts.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.dim }}>
+        <div style={{ textAlign: "center", padding: 40, color: cs.dim }}>
           Você ainda não enviou nenhum texto.
         </div>
       ) : (
@@ -3756,8 +3856,8 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                 key={t.id}
                 onClick={()=>setExpandedId(open?null:t.id)}
                 style={{
-                  background: C.s1,
-                  border: `1px solid ${open?C.accent+"44":C.faint}`,
+                  background: cs.s1,
+                  border: `1px solid ${open?cs.accent+"44":cs.faint}`,
                   borderRadius: 6,
                   cursor: "pointer",
                   overflow: "hidden",
@@ -3774,29 +3874,29 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                 >
                   <div style={{flex:1,paddingRight:12}}>
                     <div style={{fontSize:14,fontWeight:600}}>{t.titulo}</div>
-                    {t.dataEntrega&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
+                    {t.dataEntrega&&<div style={{fontSize:11,color:cs.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <StatusBadge status={t.status} />
-                    <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
+                    <span style={{fontSize:10,color:cs.dim}}>{open?"▲":"▼"}</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: C.dim }}>
+                  <span style={{ fontSize: 11, color: cs.dim }}>
                     {t.editoria}
                   </span>
                   {(t.prazo || t.dataEntrega) && (
-                    <span style={{ fontSize: 11, color: C.dim }}>
+                    <span style={{ fontSize: 11, color: cs.dim }}>
                       Prazo: {t.prazo || t.dataEntrega}
                     </span>
                   )}
-                  <span style={{ fontSize: 11, color: C.dim }}>
+                  <span style={{ fontSize: 11, color: cs.dim }}>
                     Enviado: {t.dataSubmissao}
                   </span>
                 </div>
                 </div>
                 {open && (
-                  <div style={{borderTop:`1px solid ${C.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{borderTop:`1px solid ${cs.faint}`,padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
                     <div style={{display:"flex",flexDirection:"column",gap:4}}>
                       <Label>Briefing</Label>
                       <textarea
@@ -3804,20 +3904,20 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                         onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[`brief_${t.id}`]:e.target.value}));}}
                         onClick={e=>e.stopPropagation()}
                         placeholder="Link, instruções ou contexto..."
-                        style={{width:"100%",background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
+                        style={{width:"100%",background:cs.s1,border:`1px solid ${cs.b}`,color:cs.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",minHeight:60}}
                       />
-                      <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                      <button onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,t.status,{briefing:linkEdit[`brief_${t.id}`]??t.briefing??""});setLinkEdit(p=>({...p,[`brief_${t.id}`]:undefined}));}} style={{alignSelf:"flex-end",background:cs.accent,color:"#fff",border:"none",borderRadius:4,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
                     </div>
-                    {t.dataPublicacao&&<div style={{fontSize:11,color:C.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
-                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:C.dim}}>{t.obs}</div>}
-                    <div style={{background:C.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                    {t.dataPublicacao&&<div style={{fontSize:11,color:cs.dim}}>Publicação prevista: {t.dataPublicacao}</div>}
+                    {t.obs&&t.obs!=="Tarefa do banco de ideias"&&<div style={{fontSize:12,color:cs.dim}}>{t.obs}</div>}
+                    <div style={{background:cs.s2,borderRadius:6,padding:12,display:"flex",flexDirection:"column",gap:10}}>
                       <div style={{display:"flex",gap:8,alignItems:"center"}}>
                         <input
                           value={linkEdit[t.id]??t.link??""}
                           onChange={e=>{e.stopPropagation();setLinkEdit(p=>({...p,[t.id]:e.target.value}));}}
                           onClick={e=>e.stopPropagation()}
                           placeholder="Cole o link do seu texto (Google Docs, Drive...)"
-                          style={{flex:1,background:C.s1,border:`1px solid ${C.b}`,color:C.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                          style={{flex:1,background:cs.s1,border:`1px solid ${cs.b}`,color:cs.text,padding:"7px 10px",borderRadius:4,fontSize:12,fontFamily:"inherit",outline:"none"}}
                         />
                         <button
                           onClick={e=>{
@@ -3826,12 +3926,12 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                             if(updateTextStatus) updateTextStatus(t.id, t.status, {link:newLink});
                             setLinkEdit(p=>({...p,[t.id]:undefined}));
                           }}
-                          style={{background:C.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
+                          style={{background:cs.accent,color:"#fff",border:"none",borderRadius:4,padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}
                         >Salvar link</button>
                       </div>
                       {t.link&&(linkEdit[t.id]===undefined)&&(
                         <a href={t.link} target="_blank" rel="noreferrer"
-                          style={{fontSize:11,color:C.accent,display:"block",wordBreak:"break-all"}}
+                          style={{fontSize:11,color:cs.accent,display:"block",wordBreak:"break-all"}}
                           onClick={e=>e.stopPropagation()}>
                           {t.link}
                         </a>
@@ -3843,7 +3943,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                           return(
                             <button key={s}
                               onClick={e=>{e.stopPropagation();if(updateTextStatus)updateTextStatus(t.id,s,{});}}
-                              style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":C.b}`,color:active?cfg.color:C.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
+                              style={{background:active?cfg.bg:"transparent",border:`1px solid ${active?cfg.color+"88":cs.b}`,color:active?cfg.color:cs.dim,padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:active?600:400}}
                             >{label}</button>
                           );
                         })}
@@ -3862,6 +3962,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
 
 // ── COLUNISTA: Calendário ────────────────────────────────────────────────
 function MeuCalendarioTab({ texts=[], colunista }) {
+  const cs = useC();
   const [viewMode, setViewMode] = useState("lista"); // "lista" | "grade"
   const myTexts = (texts||[]).filter(t=>t.colId===colunista?.id);
   const byMonth = {};
@@ -3875,38 +3976,38 @@ function MeuCalendarioTab({ texts=[], colunista }) {
   return (
     <div style={{padding:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-        <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque}}>Meu Calendário Editorial</div>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:cs.fontDestaque}}>Meu Calendário Editorial</div>
         <div style={{display:"flex",gap:6}}>
           {["lista","grade"].map(m=>(
             <button key={m} onClick={()=>setViewMode(m)}
-              style={{background:viewMode===m?C.accent:"transparent",border:`1px solid ${viewMode===m?C.accent:C.faint}`,color:viewMode===m?"#fff":C.dim,padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+              style={{background:viewMode===m?cs.accent:"transparent",border:`1px solid ${viewMode===m?cs.accent:cs.faint}`,color:viewMode===m?"#fff":cs.dim,padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
               {m==="lista"?"☰ Lista":"⊞ Grade"}
             </button>
           ))}
         </div>
       </div>
-      <div style={{fontSize:12,color:C.muted,marginBottom:20}}>Suas datas de entrega e publicação.</div>
+      <div style={{fontSize:12,color:cs.muted,marginBottom:20}}>Suas datas de entrega e publicação.</div>
       {months.length===0 ? (
-        <div style={{textAlign:"center",padding:40,color:C.dim}}>Nenhuma tarefa com data definida.</div>
+        <div style={{textAlign:"center",padding:40,color:cs.dim}}>Nenhuma tarefa com data definida.</div>
       ) : viewMode==="lista" ? (<>{months.map(mk=>{
             const [y,m]=mk.split("-");
             return(
               <div key={mk} style={{marginBottom:24}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
+                <div style={{fontSize:13,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${cs.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {byMonth[mk].sort((a,b)=>(a.dataEntrega||"").localeCompare(b.dataEntrega||"")).map(t=>{
                     const dl=t.dataEntrega?Math.ceil((new Date(t.dataEntrega)-new Date())/(1000*60*60*24)):null;
-                    const borderColor=dl===null?C.faint:dl<0?C.red:dl<=3?C.amber:C.faint;
+                    const borderColor=dl===null?cs.faint:dl<0?cs.red:dl<=3?cs.amber:cs.faint;
                     return(
-                      <div key={t.id} style={{background:C.s1,border:`1px solid ${borderColor}`,borderRadius:6,padding:"12px 14px"}}>
+                      <div key={t.id} style={{background:cs.s1,border:`1px solid ${borderColor}`,borderRadius:6,padding:"12px 14px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                           <div style={{fontSize:13,fontWeight:600,flex:1}}>{t.titulo}</div>
                           <StatusBadge status={t.status}/>
                         </div>
                         <div style={{display:"flex",gap:16,flexWrap:"wrap",marginTop:6}}>
-                          <span style={{fontSize:11,color:C.dim}}>{t.editoria}</span>
-                          {t.dataEntrega&&<span style={{fontSize:11,color:dl<0?C.red:dl<=3?C.amber:C.dim}}>Entrega: {t.dataEntrega}</span>}
-                          {t.dataPublicacao&&<span style={{fontSize:11,color:C.dim}}>Publicação: {t.dataPublicacao}</span>}
+                          <span style={{fontSize:11,color:cs.dim}}>{t.editoria}</span>
+                          {t.dataEntrega&&<span style={{fontSize:11,color:dl<0?cs.red:dl<=3?cs.amber:cs.dim}}>Entrega: {t.dataEntrega}</span>}
+                          {t.dataPublicacao&&<span style={{fontSize:11,color:cs.dim}}>Publicação: {t.dataPublicacao}</span>}
                         </div>
                       </div>
                     );
@@ -3928,18 +4029,18 @@ function MeuCalendarioTab({ texts=[], colunista }) {
             });
             return(
               <div key={mk} style={{marginBottom:24}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
+                <div style={{fontSize:13,fontWeight:700,color:cs.accent,fontFamily:cs.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${cs.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
-                  {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><div key={d} style={{fontSize:9,color:C.dim,textAlign:"center",padding:4,fontWeight:700}}>{d}</div>)}
+                  {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><div key={d} style={{fontSize:9,color:cs.dim,textAlign:"center",padding:4,fontWeight:700}}>{d}</div>)}
                   {Array.from({length:firstDay}).map((_,i)=><div key={"e"+i}/>)}
                   {Array.from({length:daysInMonth}).map((_,i)=>{
                     const day = String(i+1).padStart(2,"0");
                     const tasks = tasksByDay[day]||[];
                     return(
-                      <div key={day} style={{background:tasks.length?C.acBg:C.s1,border:`1px solid ${tasks.length?C.accent+"44":C.faint}`,borderRadius:4,padding:4,minHeight:48,position:"relative"}}>
-                        <div style={{fontSize:10,color:tasks.length?C.accent:C.dim,fontWeight:tasks.length?700:400}}>{i+1}</div>
+                      <div key={day} style={{background:tasks.length?cs.acBg:cs.s1,border:`1px solid ${tasks.length?cs.accent+"44":cs.faint}`,borderRadius:4,padding:4,minHeight:48,position:"relative"}}>
+                        <div style={{fontSize:10,color:tasks.length?cs.accent:cs.dim,fontWeight:tasks.length?700:400}}>{i+1}</div>
                         {tasks.map((t,ti)=>(
-                          <div key={ti} style={{fontSize:8,color:C.text,background:C.accent+"22",borderRadius:2,padding:"1px 3px",marginTop:2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={t.titulo}>{t.titulo.slice(0,15)}</div>
+                          <div key={ti} style={{fontSize:8,color:cs.text,background:cs.accent+"22",borderRadius:2,padding:"1px 3px",marginTop:2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={t.titulo}>{t.titulo.slice(0,15)}</div>
                         ))}
                       </div>
                     );
@@ -3956,6 +4057,7 @@ function MeuCalendarioTab({ texts=[], colunista }) {
 
 // ── COLUNISTA: Contrapartidas ────────────────────────────────────────────
 function MinhasContrapartidasTab({ contrapartidas }) {
+  const cs = useC();
   const tipos = [
     {
       key: "certificadoHoras",
@@ -3981,18 +4083,18 @@ function MinhasContrapartidasTab({ contrapartidas }) {
           fontSize: 16,
           fontWeight: 700,
           marginBottom: 4,
-          fontFamily: C.fontDestaque,
+          fontFamily: cs.fontDestaque,
         }}
       >
         Minhas Contrapartidas
       </div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: cs.muted, marginBottom: 12 }}>
         {done}/{tipos.length} liberadas
       </div>
       <div
         style={{
           height: 4,
-          background: C.faint,
+          background: cs.faint,
           borderRadius: 2,
           marginBottom: 20,
         }}
@@ -4001,7 +4103,7 @@ function MinhasContrapartidasTab({ contrapartidas }) {
           style={{
             height: "100%",
             width: `${(done / tipos.length) * 100}%`,
-            background: C.green,
+            background: cs.green,
             borderRadius: 2,
           }}
         />
@@ -4013,8 +4115,8 @@ function MinhasContrapartidasTab({ contrapartidas }) {
             <div
               key={t.key}
               style={{
-                background: ok ? C.grBg : C.s1,
-                border: `1px solid ${ok ? C.green + "44" : C.faint}`,
+                background: ok ? cs.grBg : cs.s1,
+                border: `1px solid ${ok ? cs.green + "44" : cs.faint}`,
                 borderRadius: 6,
                 padding: 16,
                 display: "flex",
@@ -4027,13 +4129,13 @@ function MinhasContrapartidasTab({ contrapartidas }) {
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: ok ? C.grBg : C.s3,
-                  border: `1px solid ${ok ? C.green : C.faint}`,
+                  background: ok ? cs.grBg : cs.s3,
+                  border: `1px solid ${ok ? cs.green : cs.faint}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 16,
-                  color: ok ? C.green : C.dim,
+                  color: ok ? cs.green : cs.dim,
                   flexShrink: 0,
                 }}
               >
@@ -4044,15 +4146,15 @@ function MinhasContrapartidasTab({ contrapartidas }) {
                   style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: ok ? C.green : C.text,
+                    color: ok ? cs.green : cs.text,
                     marginBottom: 2,
                   }}
                 >
                   {t.label}
                 </div>
-                <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
+                <div style={{ fontSize: 11, color: cs.muted }}>{t.desc}</div>
                 {!ok && (
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: cs.dim, marginTop: 4 }}>
                     Aguardando confirmação da equipe editorial.
                   </div>
                 )}
@@ -4097,6 +4199,7 @@ function dataEntregaSugerida(isoDataPublicacao) {
 
 // ── GESTOR: Briefing ─────────────────────────────────────────────────────
 function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
+  const cs = useC();
   const [colId, setColId] = useState("");
   const [editoria, setEditoria] = useState("");
   const [linkRef, setLinkRef] = useState("");
@@ -4121,10 +4224,10 @@ function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
 
   return (
     <div style={{padding:20,maxWidth:700}}>
-      <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:4}}>Enviar Briefing</div>
-      <div style={{fontSize:13,color:C.muted,marginBottom:20}}>Selecione colunista, editoria e data de publicação. A entrega sugerida é calculada automaticamente (3 dias antes).</div>
+      <div style={{fontSize:16,fontWeight:700,fontFamily:cs.fontDestaque,marginBottom:4}}>Enviar Briefing</div>
+      <div style={{fontSize:13,color:cs.muted,marginBottom:20}}>Selecione colunista, editoria e data de publicação. A entrega sugerida é calculada automaticamente (3 dias antes).</div>
 
-      {sent&&<div style={{background:C.grBg,border:`1px solid ${C.green}44`,borderRadius:6,padding:"12px 16px",marginBottom:16,fontSize:13,color:C.green,fontWeight:600}}>✓ Briefing enviado!</div>}
+      {sent&&<div style={{background:cs.grBg,border:`1px solid ${cs.grA44}`,borderRadius:6,padding:"12px 16px",marginBottom:16,fontSize:13,color:cs.green,fontWeight:600}}>✓ Briefing enviado!</div>}
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
         <div><Label>Colunista *</Label>
@@ -4137,40 +4240,40 @@ function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
         <div><Label>Data de Publicação</Label>
           <Select value={dataPublicacao} onChange={handleDataPub} placeholder="— selecione slot —"
             options={slots.map(s=>({value:s.isoDate,label:s.label}))}/>
-          <div style={{fontSize:10,color:C.dim,marginTop:4}}>Apenas Seg, Qua e Sex · 10h, 12h ou 18h</div>
+          <div style={{fontSize:10,color:cs.dim,marginTop:4}}>Apenas Seg, Qua e Sex · 10h, 12h ou 18h</div>
         </div>
         <div><Label>Data de Entrega (automática)</Label>
           <Input type="date" value={dataEntrega} onChange={setDataEntregaB} placeholder=""/>
-          <div style={{fontSize:10,color:C.dim,marginTop:4}}>3 dias antes da publicação</div>
+          <div style={{fontSize:10,color:cs.dim,marginTop:4}}>3 dias antes da publicação</div>
         </div>
         <div style={{gridColumn:"1/-1"}}><Label>Link de Referência</Label>
           <Input value={linkRef} onChange={setLinkRef} placeholder="https://... artigo, referência ou documento"/>
         </div>
         <div style={{gridColumn:"1/-1"}}><Label>Instruções / Observações</Label>
           <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Diretrizes editoriais, tom, pontos obrigatórios..."
-            style={{width:"100%",background:C.s2,border:`1px solid ${C.b}`,color:C.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+            style={{width:"100%",background:cs.s2,border:`1px solid ${cs.b}`,color:cs.text,padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:100,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
         </div>
       </div>
       <Btn variant="primary" onClick={submit} disabled={!colId||!editoria}>Enviar Briefing</Btn>
 
       {briefings.length>0&&(
         <div style={{marginTop:28}}>
-          <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:12}}>Briefings enviados ({briefings.length})</div>
+          <div style={{fontSize:13,fontWeight:700,fontFamily:cs.fontDestaque,marginBottom:12}}>Briefings enviados ({briefings.length})</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {briefings.slice().reverse().map(b=>(
-              <div key={b.id} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px"}}>
+              <div key={b.id} style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"12px 14px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                   <div>
-                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{b.colunistaNome}</div>
-                    <div style={{fontSize:11,color:C.dim}}>{b.editoria}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:cs.text}}>{b.colunistaNome}</div>
+                    <div style={{fontSize:11,color:cs.dim}}>{b.editoria}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    {b.dataPublicacao&&<div style={{fontSize:11,color:C.accent}}>Publ.: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
-                    {b.dataEntrega&&<div style={{fontSize:11,color:C.amber}}>Entrega: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
+                    {b.dataPublicacao&&<div style={{fontSize:11,color:cs.accent}}>Publ.: {new Date(b.dataPublicacao).toLocaleDateString("pt-BR")}</div>}
+                    {b.dataEntrega&&<div style={{fontSize:11,color:cs.amber}}>Entrega: {new Date(b.dataEntrega).toLocaleDateString("pt-BR")}</div>}
                   </div>
                 </div>
-                {b.linkRef&&<a href={b.linkRef} target="_blank" rel="noreferrer" style={{fontSize:11,color:C.purple,display:"block",marginBottom:4,wordBreak:"break-all"}}>{b.linkRef}</a>}
-                {b.obs&&<div style={{fontSize:12,color:C.muted,fontStyle:"italic"}}>{b.obs}</div>}
+                {b.linkRef&&<a href={b.linkRef} target="_blank" rel="noreferrer" style={{fontSize:11,color:cs.purple,display:"block",marginBottom:4,wordBreak:"break-all"}}>{b.linkRef}</a>}
+                {b.obs&&<div style={{fontSize:12,color:cs.muted,fontStyle:"italic"}}>{b.obs}</div>}
               </div>
             ))}
           </div>
@@ -4183,6 +4286,7 @@ function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
 // ── Leituras Essenciais (gestor edita, colunista lê) ─────────────────────
 
 function PdfViewer({ url, leituraId, colId, onProgress }) {
+  const cs = useC();
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -4219,23 +4323,24 @@ function PdfViewer({ url, leituraId, colId, onProgress }) {
     });
   }, [page, pdfDoc]);
 
-  if(loading) return <div style={{padding:40,textAlign:"center",color:C.dim}}>Carregando PDF...</div>;
-  if(error) return <div style={{padding:40,textAlign:"center",color:C.red}}>Não foi possível carregar. Certifique-se que o PDF está em /public/pdfs/ no repositório.</div>;
+  if(loading) return <div style={{padding:40,textAlign:"center",color:cs.dim}}>Carregando PDF...</div>;
+  if(error) return <div style={{padding:40,textAlign:"center",color:cs.red}}>Não foi possível carregar. Certifique-se que o PDF está em /public/pdfs/ no repositório.</div>;
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <canvas id={`pdf-canvas-${leituraId}`} style={{maxWidth:"100%",border:`1px solid ${C.faint}`,borderRadius:4}}/>
+      <canvas id={`pdf-canvas-${leituraId}`} style={{maxWidth:"100%",border:`1px solid ${cs.faint}`,borderRadius:4}}/>
       <div style={{display:"flex",gap:12,alignItems:"center"}}>
-        <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} style={{background:C.s2,border:`1px solid ${C.b}`,color:page===1?C.dim:C.text,padding:"6px 14px",borderRadius:4,cursor:page===1?"not-allowed":"pointer",fontFamily:"inherit"}}>← Anterior</button>
-        <span style={{fontSize:12,color:C.muted}}>Página {page} de {total}</span>
-        <button onClick={()=>setPage(p=>Math.min(total,p+1))} disabled={page===total} style={{background:C.s2,border:`1px solid ${C.b}`,color:page===total?C.dim:C.text,padding:"6px 14px",borderRadius:4,cursor:page===total?"not-allowed":"pointer",fontFamily:"inherit"}}>Próxima →</button>
+        <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} style={{background:cs.s2,border:`1px solid ${cs.b}`,color:page===1?cs.dim:cs.text,padding:"6px 14px",borderRadius:4,cursor:page===1?"not-allowed":"pointer",fontFamily:"inherit"}}>← Anterior</button>
+        <span style={{fontSize:12,color:cs.muted}}>Página {page} de {total}</span>
+        <button onClick={()=>setPage(p=>Math.min(total,p+1))} disabled={page===total} style={{background:cs.s2,border:`1px solid ${cs.b}`,color:page===total?cs.dim:cs.text,padding:"6px 14px",borderRadius:4,cursor:page===total?"not-allowed":"pointer",fontFamily:"inherit"}}>Próxima →</button>
       </div>
-      <div style={{width:"100%",background:C.s2,borderRadius:4,height:6,overflow:"hidden"}}>
-        <div style={{width:`${total?((page/total)*100):0}%`,background:C.accent,height:"100%",transition:"width 0.3s"}}/>
+      <div style={{width:"100%",background:cs.s2,borderRadius:4,height:6,overflow:"hidden"}}>
+        <div style={{width:`${total?((page/total)*100):0}%`,background:cs.accent,height:"100%",transition:"width 0.3s"}}/>
       </div>
     </div>
   );
 }
 function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setReadProgress }) {
+  const cs = useC();
   const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
   const [adding, setAdding] = useState(false);
   const [viewingPdf, setViewingPdf] = useState(null);
@@ -4250,8 +4355,8 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
     <div style={{padding:20,maxWidth:760}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
-          <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Leituras Essenciais</div>
-          <div style={{fontSize:13,color:C.muted}}>Material obrigatório para certificação dos colunistas.</div>
+          <div style={{fontSize:16,fontWeight:700,fontFamily:cs.fontDestaque,marginBottom:2}}>Leituras Essenciais</div>
+          <div style={{fontSize:13,color:cs.muted}}>Material obrigatório para certificação dos colunistas.</div>
         </div>
         {role==="gestor"&&<Btn variant="primary" small onClick={()=>setAdding(true)}>+ Adicionar</Btn>}
       </div>
@@ -4259,7 +4364,7 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
       {viewingPdf ? (
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:cs.fontDestaque}}>{viewingPdf.titulo}</div>
             <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
           </div>
           {role==="gestor" ? (
@@ -4268,13 +4373,13 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
                 const prog=(readProgress[col.id]||{})[viewingPdf.id];
                 const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
                 return(
-                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
+                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
                     <Avatar sigla={col.sigla} size={26}/>
                     <div style={{flex:1}}>
                       <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
-                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total} · {new Date(prog.lastRead).toLocaleDateString("pt-BR")}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
+                      {prog?<div style={{fontSize:10,color:cs.dim}}>Pág. {prog.page}/{prog.total} · {new Date(prog.lastRead).toLocaleDateString("pt-BR")}</div>:<div style={{fontSize:10,color:cs.dim}}>Não iniciou</div>}
                     </div>
-                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                    <div style={{fontSize:13,fontWeight:700,color:pct===100?cs.green:pct>0?cs.amber:cs.dim}}>{pct}%</div>
                   </div>
                 );
               })}
@@ -4287,29 +4392,29 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
       ) : (
         <>
           {leituras.length===0
-            ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhuma leitura cadastrada ainda.</div>
+            ?<div style={{textAlign:"center",padding:40,color:cs.dim,fontSize:14}}>Nenhuma leitura cadastrada ainda.</div>
             :<div style={{display:"flex",flexDirection:"column",gap:10}}>
               {leituras.map((l,idx)=>{
-                const ec=ED_COLORS[l.editoria]||C.muted;
+                const ec=ED_COLORS[l.editoria]||cs.muted;
                 const prog=role==="colunista"?(readProgress[user?.colId]||{})[l.id]:null;
                 const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
                 const allProg=role==="gestor"?COLUMNISTS.map(c=>(readProgress[c.id]||{})[l.id]).filter(Boolean):[];
                 const avgPct=allProg.length?Math.round(allProg.reduce((a,p)=>a+(p.total?p.page/p.total:0),0)/allProg.length*100):0;
                 return(
                   <div key={l.id||idx} onClick={()=>setViewingPdf(l)}
-                    style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start",cursor:"pointer"}}>
+                    style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start",cursor:"pointer"}}>
                     <div style={{flex:1}}>
                       {l.editoria&&<div style={{fontSize:10,color:ec,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l.editoria}</div>}
-                      <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{l.titulo}</div>
-                      {l.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:6}}>{l.descricao}</div>}
-                      {role==="colunista"&&pct>0&&<div style={{background:C.s2,borderRadius:4,height:4,overflow:"hidden",marginTop:4}}><div style={{width:`${pct}%`,background:pct===100?C.green:C.accent,height:"100%"}}/></div>}
-                      {role==="gestor"&&avgPct>0&&<div style={{fontSize:10,color:C.dim,marginTop:4}}>{allProg.length} lendo · média {avgPct}%</div>}
+                      <div style={{fontSize:14,fontWeight:600,color:cs.text,marginBottom:4}}>{l.titulo}</div>
+                      {l.descricao&&<div style={{fontSize:12,color:cs.muted,marginBottom:6}}>{l.descricao}</div>}
+                      {role==="colunista"&&pct>0&&<div style={{background:cs.s2,borderRadius:4,height:4,overflow:"hidden",marginTop:4}}><div style={{width:`${pct}%`,background:pct===100?cs.green:cs.accent,height:"100%"}}/></div>}
+                      {role==="gestor"&&avgPct>0&&<div style={{fontSize:10,color:cs.dim,marginTop:4}}>{allProg.length} lendo · média {avgPct}%</div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
-                      {role==="colunista"&&<div style={{fontSize:12,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct>0?`${pct}%`:"Ler"}</div>}
+                      {role==="colunista"&&<div style={{fontSize:12,fontWeight:700,color:pct===100?cs.green:pct>0?cs.amber:cs.dim}}>{pct>0?`${pct}%`:"Ler"}</div>}
                       {role==="gestor"&&(
                         <button onClick={e=>{e.stopPropagation();setLeituras(prev=>prev.filter((_,i)=>i!==idx));}}
-                          style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
+                          style={{background:"none",border:"none",color:cs.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
                       )}
                     </div>
                   </div>
@@ -4339,6 +4444,7 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
 
 // ── Trilha de Aprendizado (PDFs por editoria) ─────────────────────────────
 function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, setReadProgress }) {
+  const cs = useC();
   const [viewingPdf, setViewingPdf] = useState(null);
   const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
   const [adding, setAdding] = useState(false);
@@ -4363,7 +4469,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
       {viewingPdf ? (
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:cs.fontDestaque}}>{viewingPdf.titulo}</div>
             <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
           </div>
           {role==="gestor" ? (
@@ -4372,13 +4478,13 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
                 const prog=(readProgress[col.id]||{})[viewingPdf.id];
                 const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
                 return(
-                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
+                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
                     <Avatar sigla={col.sigla} size={26}/>
                     <div style={{flex:1}}>
                       <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
-                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
+                      {prog?<div style={{fontSize:10,color:cs.dim}}>Pág. {prog.page}/{prog.total}</div>:<div style={{fontSize:10,color:cs.dim}}>Não iniciou</div>}
                     </div>
-                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                    <div style={{fontSize:13,fontWeight:700,color:pct===100?cs.green:pct>0?cs.amber:cs.dim}}>{pct}%</div>
                   </div>
                 );
               })}
@@ -4392,39 +4498,39 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
       <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
-          <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Trilha de Aprendizado</div>
-          <div style={{fontSize:13,color:C.muted}}>{role==="colunista"?"Material da sua trilha de formação.":"PDFs e links de formação por editoria."}</div>
+          <div style={{fontSize:16,fontWeight:700,fontFamily:cs.fontDestaque,marginBottom:2}}>Trilha de Aprendizado</div>
+          <div style={{fontSize:13,color:cs.muted}}>{role==="colunista"?"Material da sua trilha de formação.":"PDFs e links de formação por editoria."}</div>
         </div>
         {role==="gestor"&&<Btn variant="primary" small onClick={()=>setAdding(true)}>+ Adicionar</Btn>}
       </div>
 
       {filtered.length===0
-        ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhum material cadastrado.</div>
+        ?<div style={{textAlign:"center",padding:40,color:cs.dim,fontSize:14}}>Nenhum material cadastrado.</div>
         :<div style={{display:"flex",flexDirection:"column",gap:20}}>
           {EDITORIAS.map(ed=>{
             const items = filtered.filter(t=>t.editoria===ed);
             if(items.length===0) return null;
-            const ec=ED_COLORS[ed]||C.muted;
+            const ec=ED_COLORS[ed]||cs.muted;
             return(
               <div key={ed}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                   <div style={{width:4,height:16,background:ec,borderRadius:2}}/>
                   <div style={{fontSize:13,fontWeight:700,color:ec}}>{ed}</div>
-                  <span style={{fontSize:11,color:C.dim}}>({items.length})</span>
+                  <span style={{fontSize:11,color:cs.dim}}>({items.length})</span>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6,paddingLeft:12}}>
                   {items.map((item,idx)=>(
-                    <div key={item.id||idx} onClick={()=>item.link?.endsWith(".pdf")?setViewingPdf(item):window.open(item.link,"_blank")} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px",display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer"}}>
+                    <div key={item.id||idx} onClick={()=>item.link?.endsWith(".pdf")?setViewingPdf(item):window.open(item.link,"_blank")} style={{background:cs.s1,border:`1px solid ${cs.faint}`,borderRadius:6,padding:"12px 14px",display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer"}}>
                       <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:3}}>{item.titulo}</div>
-                        {item.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:4}}>{item.descricao}</div>}
-                        <a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>
+                        <div style={{fontSize:13,fontWeight:600,color:cs.text,marginBottom:3}}>{item.titulo}</div>
+                        {item.descricao&&<div style={{fontSize:12,color:cs.muted,marginBottom:4}}>{item.descricao}</div>}
+                        <a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:cs.accent,wordBreak:"break-all"}}>
                           {item.link.includes("pdf")?"📄 ":""}{item.link}
                         </a>
                       </div>
                       {role==="gestor"&&(
                         <button onClick={()=>setTrilha(prev=>prev.filter(t=>t.id!==item.id))}
-                          style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
+                          style={{background:"none",border:"none",color:cs.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
                       )}
                     </div>
                   ))}
@@ -4456,6 +4562,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, 
 
 // ── Main App ─────────────────────────────────────────────────────────────
 export default function App() {
+  const cs = useC();
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem("sx2_session");
@@ -4755,12 +4862,12 @@ export default function App() {
     return (
       <div
         style={{
-          background: C.bg,
+          background: cs.bg,
           height: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: C.accent,
+          color: cs.accent,
           fontFamily: "monospace",
           fontSize: 14,
         }}
@@ -4784,12 +4891,28 @@ export default function App() {
   const unread = notifications.filter((n) => !n.lida).length;
 
   return (
+    <ThemeCtx.Provider value={theme}>
+    {theme === "light" && (
+      <style>{`
+        .rainbow-card-top::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #1900ff, #0098fa, #00ff6e, #fff700, #ff8414, #ff575b);
+        }
+        .light-mode-card {
+          box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+          border: 1px solid #E8E8E8 !important;
+        }
+      `}</style>
+    )}
     <div
       style={{
-        background: theme==="light"?"#f4f4f4":C.bg,
+        background: cs.bg,
         minHeight: "100vh",
-        fontFamily: C.fontBase,
-        color: C.text,
+        fontFamily: cs.fontBase,
+        color: cs.text,
       }}
     >
       <NavBar
@@ -4910,6 +5033,7 @@ export default function App() {
         </>
       )}
     </div>
+    </ThemeCtx.Provider>
   );
 }const TASK_SCHEDULE = [
   {id:20000,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_0"},
