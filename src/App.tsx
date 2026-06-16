@@ -1286,6 +1286,8 @@ function NavBar({
   onLogout,
   gsStatus,
   contraExtra={},
+  theme="dark",
+  setTheme,
 }) {
   const gestorTabs = [
     { id: "painel", label: "Painel" },
@@ -1364,9 +1366,8 @@ function NavBar({
                   cursor: "pointer",
                   fontSize: 12,
                   fontWeight: activeTab === t.id ? 600 : 400,
-                  borderBottom: `2px solid ${
-                    activeTab === t.id ? C.accent : "transparent"
-                  }`,
+                  borderBottom: activeTab === t.id ? `3px solid transparent` : "2px solid transparent",
+                  borderImage: activeTab === t.id ? `${C.gradient} 1` : "none",
                   transition: "color 0.15s",
                   fontFamily: "inherit",
                 }}
@@ -1451,6 +1452,10 @@ function NavBar({
               ? "cache local"
               : "..."}
           </span>
+          <button onClick={()=>setTheme&&setTheme(t=>t==="dark"?"light":"dark")}
+            style={{background:"none",border:`1px solid ${C.faint}`,color:C.dim,borderRadius:4,cursor:"pointer",fontSize:12,padding:"4px 10px",fontFamily:"inherit"}}>
+            {theme==="dark"?"☀️":"🌙"}
+          </button>
           <Btn small onClick={onLogout}>
             Sair
           </Btn>
@@ -1593,6 +1598,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
   const publicados = texts.filter(t=>t.status==="Publicado").length;
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
+  const [colFilter, setColFilter] = useState(0);
   const [detail, setDetail] = useState(null);
   const [editField, setEditField] = useState({
     briefing: "",
@@ -1601,6 +1607,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
   });
   const unread = notifications.filter((n) => !n.lida);
   const filtered = texts.filter((t) => {
+    if(colFilter && t.colId !== colFilter) return false;
     if (filter !== "todos" && t.status !== filter) return false;
     if (
       search &&
@@ -1652,14 +1659,45 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
           />
         );
       })()}
-      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-        {[{label:"Total",val:totalTexts,color:C.text},{label:"Entregues",val:entregues,color:C.amber},{label:"Publicados",val:publicados,color:C.green},{label:"Pendentes",val:totalTexts-entregues-publicados,color:C.dim}].map(({label,val,color})=>(
-          <div key={label} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"10px 16px",flex:1,minWidth:100}}>
-            <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>{label}</div>
-            <div style={{fontSize:24,fontWeight:700,fontFamily:C.fontDestaque,color}}>{val}</div>
+      {(()=>{
+        const comBriefing = texts.filter(t=>t.briefing&&t.briefing.trim()).length;
+        const comLink = texts.filter(t=>t.link&&t.link.trim()).length;
+        const colAtivos = new Set(texts.filter(t=>t.status!=="Publicado").map(t=>t.colId)).size;
+        const proxPub = texts.filter(t=>t.dataPublicacao&&t.status!=="Publicado").sort((a,b)=>a.dataPublicacao.localeCompare(b.dataPublicacao))[0];
+        const proxCol = proxPub ? COLUMNISTS.find(c=>c.id===proxPub.colId) : null;
+        const proxFoto = proxPub ? (contraExtra[proxPub.colId]||{}).foto : null;
+        return (
+          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+            <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 16px",flex:2,minWidth:200}}>
+              <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Próxima Publicação</div>
+              {proxPub ? (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  {proxFoto
+                    ? <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",flexShrink:0}}><img src={proxFoto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
+                    : <Avatar sigla={proxCol?.sigla||"?"} size={36}/>
+                  }
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:C.text}}>{proxCol?.nome||proxPub.colunistaNome}</div>
+                    <div style={{fontSize:11,color:C.accent}}>{proxPub.dataPublicacao}</div>
+                    <div style={{fontSize:10,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200}}>{proxPub.titulo}</div>
+                  </div>
+                </div>
+              ) : <div style={{fontSize:13,color:C.dim}}>Nenhuma agendada</div>}
+            </div>
+            {[
+              {label:"Com Briefing",val:comBriefing,color:C.purple,sub:`de ${texts.length}`},
+              {label:"Link Enviado",val:comLink,color:C.green,sub:`de ${texts.length}`},
+              {label:"Colunistas Ativos",val:colAtivos,color:C.amber,sub:`de ${COLUMNISTS.length}`},
+            ].map(({label,val,color,sub})=>(
+              <div key={label} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 16px",flex:1,minWidth:120}}>
+                <div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>{label}</div>
+                <div style={{fontSize:24,fontWeight:700,fontFamily:C.fontDestaque,color}}>{val}</div>
+                <div style={{fontSize:10,color:C.dim,marginTop:2}}>{sub}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
       {unread.length > 0 && (
         <div
           style={{
@@ -1738,7 +1776,12 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
           placeholder="Buscar por título ou colunista..."
           style={{ flex: 1, minWidth: 200 }}
         />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems:"center" }}>
+          <select value={colFilter} onChange={e=>setColFilter(Number(e.target.value))}
+            style={{background:C.s1,border:`1px solid ${C.b}`,color:colFilter?C.text:C.dim,padding:"5px 8px",borderRadius:4,fontSize:11,fontFamily:"inherit",cursor:"pointer"}}>
+            <option value={0}>Todos colunistas</option>
+            {COLUMNISTS.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
           {[
             "todos",
             "Enviado",
@@ -2014,6 +2057,7 @@ function IdeiaTab({
   updateTextStatus,
 }) {
   const [filter, setFilter] = useState("todas");
+  const [edFilter, setEdFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [selectMode, setSelectMode] = useState(false);
   const [sugestaoModal, setSugestaoModal] = useState(false);
@@ -2175,7 +2219,7 @@ function IdeiaTab({
             alignItems: "center",
           }}
         >
-          <Btn small onClick={() => setSugestaoModal(true)} variant="primary">
+          <Btn small onClick={() => setSugestaoOpen(s=>!s)} variant="primary">
             + Sugestão
           </Btn>
           <Btn
@@ -2233,7 +2277,7 @@ function IdeiaTab({
       </div>
 
       {/* Suggestion Box — always visible above cards */}
-      <div style={{background:C.acBg,border:`2px solid ${C.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:24}}>
+      {sugestaoOpen && <div style={{background:C.acBg,border:`2px solid ${C.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:24}}>
         <div style={{fontSize:14,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,marginBottom:8}}>✦ Sugira uma nova pauta</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
           <Select value={novaCol} onChange={setNovaCol} placeholder="— colunista —"
@@ -2253,7 +2297,7 @@ function IdeiaTab({
         }}>Adicionar ao Banco de Ideias</Btn>
       </div>
 
-      {/* By columnist */}
+}      {/* By columnist */}
       {byCol.map(({ col, ideas }) => (
         <div key={col.id} style={{ marginBottom: 28 }}>
           <div
@@ -2345,6 +2389,10 @@ function IdeiaTab({
                       color={cfg_st.color}
                       bg={cfg_st.bg}
                     />
+                    {idea.status==="em tarefa"&&(()=>{
+                      const t=texts.find(tx=>tx.key===idea.key);
+                      return t?.dataPublicacao?<span style={{fontSize:9,color:C.accent,fontWeight:600}}>📅 {t.dataPublicacao}</span>:null;
+                    })()}
                   </div>
                   {/* Pauta */}
                   <div
@@ -2389,10 +2437,7 @@ function IdeiaTab({
                       )}
                       {idea.status === "em tarefa" && (
                         <>
-                          <Btn small variant="purple" onClick={()=>{
-                            const t=texts.find(tx=>tx.key===idea.key);
-                            if(t){setEditIdeia(t);setEditIdeiaData({titulo:t.titulo,editoria:t.editoria,status:t.status,dataEntrega:t.dataEntrega||"",dataPublicacao:t.dataPublicacao||"",briefing:t.briefing||"",obs:t.obs||"",link:t.link||"",esboco:""});}
-                          }}>Editar</Btn>
+                          <Btn small variant="purple" onClick={()=>openEditIdeia(idea)}>Editar</Btn>
                           <Btn small onClick={() => setIdeaStatus(idea.key, "disponível")}>Reabrir</Btn>
                         </>
                       )}
@@ -2940,19 +2985,10 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               }}
             >
               {m.label}
-              {(hasPautas || hasTexts) && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 3,
-                    right: 3,
-                    width: 5,
-                    height: 5,
-                    borderRadius: "50%",
-                    background: C.accent,
-                  }}
-                />
-              )}
+              {(()=>{
+                const cnt=texts.filter(t=>t.dataPublicacao&&t.dataPublicacao.startsWith(m.key)).length;
+                return cnt>0?<span style={{fontSize:9,background:C.accent+"33",color:C.accent,borderRadius:10,padding:"1px 5px",marginLeft:4,fontWeight:700}}>{cnt}</span>:null;
+              })()}
             </button>
           );
         })}
@@ -2970,14 +3006,20 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
         {cur.fullLabel}
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginBottom: 20,
-        }}
-      >
+      <div style={{marginBottom: 20}}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <Label>Calendário do mês — {mPautas.length} pautas</Label>
+          <Btn small variant="primary" onClick={() => setAddPautaOpen(true)}>
+            + Adicionar
+          </Btn>
+        </div>
         <div>
           <div
             style={{
@@ -2987,11 +3029,6 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               marginBottom: 10,
             }}
           >
-            <Label>Pautas agendadas ({mPautas.length}{textsComPub.length>0?` · ${textsComPub.length} com data de pub.`:""})</Label>
-            <Btn small variant="primary" onClick={() => setAddPautaOpen(true)}>
-              + Adicionar
-            </Btn>
-          </div>
           {mPautas.length === 0 ? (
             <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
               Nenhuma pauta agendada.
@@ -3165,6 +3202,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
 
 // ── GESTOR: Colunistas ──────────────────────────────────────────────────
 function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
+  const [edFilterCol, setEdFilterCol] = useState("");
   const [search, setSearch] = useState("");
   const [profile, setProfile] = useState(null);
   const [editData, setEditData] = useState({foto:"",descricao:"",bioLink:"",obs:""});
@@ -3182,14 +3220,20 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 
   const filtered = COLUMNISTS.filter(
     (c) =>
-      !search ||
-      c.nome.toLowerCase().includes(search.toLowerCase()) ||
-      c.curso.toLowerCase().includes(search.toLowerCase())
+      (!search ||
+        c.nome.toLowerCase().includes(search.toLowerCase()) ||
+        c.curso.toLowerCase().includes(search.toLowerCase())) &&
+      (!edFilterCol || c.editorias.includes(edFilterCol))
   );
   return (
     <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 16 }}>
-        <Input value={search} onChange={setSearch} placeholder="Buscar colunista ou instituição..."/>
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <Input value={search} onChange={setSearch} placeholder="Buscar colunista ou instituição..." style={{flex:1,minWidth:200}}/>
+        <select value={edFilterCol||""} onChange={e=>setEdFilterCol(e.target.value)}
+          style={{background:C.s1,border:`1px solid ${C.b}`,color:(edFilterCol||"")?C.text:C.dim,padding:"8px 12px",borderRadius:4,fontSize:12,fontFamily:"inherit",cursor:"pointer"}}>
+          <option value="">Todas editorias</option>
+          {EDITORIAS.map(e=><option key={e} value={e}>{e}</option>)}
+        </select>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {filtered.map((col) => {
@@ -3236,10 +3280,16 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
               {(()=>{
                 const pendentes=myTexts.filter(t=>t.status!=="Publicado"&&t.status!=="Rejeitado");
                 const bfs=briefings.filter(b=>b.colId===col.id&&b.status!=="Concluído");
+                const proxPub=pendentes.filter(t=>t.dataPublicacao).sort((a,b)=>a.dataPublicacao.localeCompare(b.dataPublicacao))[0];
+                const atrasados=pendentes.filter(t=>t.dataEntrega&&Math.ceil((new Date(t.dataEntrega)-new Date())/(1000*60*60*24))<0).length;
                 if(pendentes.length===0&&bfs.length===0) return null;
                 return(
                   <div style={{padding:"8px 14px 12px",borderTop:`1px solid ${C.faint}`}}>
-                    <div style={{fontSize:10,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Demandas ativas</div>
+                    <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                      <div style={{fontSize:10,color:C.muted,letterSpacing:"0.1em",textTransform:"uppercase"}}>Demandas ativas</div>
+                      {proxPub&&<div style={{fontSize:10,color:C.accent}}>📅 {proxPub.dataPublicacao}</div>}
+                      {atrasados>0&&<div style={{fontSize:10,color:C.red,fontWeight:700}}>⚠ {atrasados} atrasad{atrasados>1?"as":"a"}</div>}
+                    </div>
                     {bfs.map((b,i)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                         <div style={{fontSize:11,color:C.purple,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📋 {b.editoria}</div>
@@ -3331,6 +3381,8 @@ function ColunistasTab({ texts, contraExtra, setContraExtra, briefings=[] }) {
 
 // ── COLUNISTA: Enviar Texto ─────────────────────────────────────────────
 function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtra, texts=[], updateTextStatus }) {
+  const myTotal = texts.filter(t=>t.colId===colunista?.id).length;
+  const myEntregues = texts.filter(t=>t.colId===colunista?.id&&(t.status==="Enviado"||t.status==="Em Revisão"||t.status==="Publicado")).length;
   const [titulo, setTitulo] = useState("");
   const [editoria, setEditoria] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
@@ -3338,6 +3390,7 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
   const [obs, setObs] = useState("");
   const [sent, setSent] = useState(false);
   const [sugerirMode, setSugerirMode] = useState(false);
+  const [sugestaoOpen, setSugestaoOpen] = useState(false);
   const [sugestao, setSugestao] = useState("");
   const [sugestaoEd, setSugestaoEd] = useState("");
 
@@ -3375,6 +3428,17 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
         bioLink={colExtra.bioLink||""}
         onEdit={(d)=>{ if(setContraExtra && colunista?.id) setContraExtra(prev=>({...prev,[colunista.id]:{...(prev[colunista.id]||{}),...d}})); }}
       />
+      {myTotal > 0 && (
+        <div style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:C.dim,marginBottom:4}}>{myEntregues} de {myTotal} textos entregues</div>
+            <div style={{background:C.s2,borderRadius:4,height:6,overflow:"hidden"}}>
+              <div style={{width:`${myTotal?(myEntregues/myTotal*100):0}%`,background:C.green,height:"100%",transition:"width 0.3s"}}/>
+            </div>
+          </div>
+          <div style={{fontSize:18,fontWeight:700,fontFamily:C.fontDestaque,color:C.green}}>{myTotal?Math.round(myEntregues/myTotal*100):0}%</div>
+        </div>
+      )}
       {myTexts.length > 0 && (
         <div style={{marginBottom:20}}>
           <div style={{fontSize:13,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:10,color:C.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Suas Tarefas</div>
@@ -3385,7 +3449,10 @@ function EnviarTab({ colunista, addText, addIdeia, contraExtra={}, setContraExtr
                 <div key={t.id} onClick={()=>setExpandedId(open?null:t.id)}
                   style={{background:C.s1,border:`1px solid ${open?C.accent+"44":C.faint}`,borderRadius:6,cursor:"pointer",overflow:"hidden"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px"}}>
-                    <div style={{fontSize:13,fontWeight:600,flex:1,paddingRight:8}}>{t.titulo}</div>
+                    <div style={{flex:1,paddingRight:8}}>
+                      <div style={{fontSize:13,fontWeight:600}}>{t.titulo}</div>
+                      {t.dataEntrega&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
+                    </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <StatusBadge status={t.status}/>
                       <span style={{fontSize:10,color:C.dim}}>{open?"▲":"▼"}</span>
@@ -3747,15 +3814,9 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                     marginBottom: 8,
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      flex: 1,
-                      paddingRight: 12,
-                    }}
-                  >
-                    {t.titulo}
+                  <div style={{flex:1,paddingRight:12}}>
+                    <div style={{fontSize:14,fontWeight:600}}>{t.titulo}</div>
+                    {t.dataEntrega&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>Entrega: {t.dataEntrega}</div>}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <StatusBadge status={t.status} />
@@ -3843,6 +3904,7 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
 
 // ── COLUNISTA: Calendário ────────────────────────────────────────────────
 function MeuCalendarioTab({ texts=[], colunista }) {
+  const [viewMode, setViewMode] = useState("lista"); // "lista" | "grade"
   const myTexts = (texts||[]).filter(t=>t.colId===colunista?.id);
   const byMonth = {};
   myTexts.forEach(t=>{
@@ -3854,11 +3916,21 @@ function MeuCalendarioTab({ texts=[], colunista }) {
   const months = Object.keys(byMonth).sort();
   return (
     <div style={{padding:20}}>
-      <div style={{fontSize:16,fontWeight:700,marginBottom:4,fontFamily:C.fontDestaque}}>Meu Calendário Editorial</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque}}>Meu Calendário Editorial</div>
+        <div style={{display:"flex",gap:6}}>
+          {["lista","grade"].map(m=>(
+            <button key={m} onClick={()=>setViewMode(m)}
+              style={{background:viewMode===m?C.accent:"transparent",border:`1px solid ${viewMode===m?C.accent:C.faint}`,color:viewMode===m?"#fff":C.dim,padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+              {m==="lista"?"☰ Lista":"⊞ Grade"}
+            </button>
+          ))}
+        </div>
+      </div>
       <div style={{fontSize:12,color:C.muted,marginBottom:20}}>Suas datas de entrega e publicação.</div>
-      {months.length===0
-        ? <div style={{textAlign:"center",padding:40,color:C.dim}}>Nenhuma tarefa com data definida.</div>
-        : months.map(mk=>{
+      {months.length===0 ? (
+        <div style={{textAlign:"center",padding:40,color:C.dim}}>Nenhuma tarefa com data definida.</div>
+      ) : viewMode==="lista" ? months.map(mk=>{
             const [y,m]=mk.split("-");
             return(
               <div key={mk} style={{marginBottom:24}}>
@@ -3885,7 +3957,40 @@ function MeuCalendarioTab({ texts=[], colunista }) {
               </div>
             );
           })
-      }
+      ) : (
+        // Grade view
+        months.map(mk=>{
+          const [y,m]=mk.split("-");
+          const daysInMonth = new Date(parseInt(y),parseInt(m),0).getDate();
+          const firstDay = new Date(parseInt(y),parseInt(m)-1,1).getDay();
+          const tasksByDay = {};
+          byMonth[mk].forEach(t=>{
+            const d = (t.dataPublicacao||t.dataEntrega||"").split("-")[2];
+            if(d){ if(!tasksByDay[d]) tasksByDay[d]=[]; tasksByDay[d].push(t); }
+          });
+          return(
+            <div key={mk} style={{marginBottom:24}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
+                {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><div key={d} style={{fontSize:9,color:C.dim,textAlign:"center",padding:4,fontWeight:700}}>{d}</div>)}
+                {Array.from({length:firstDay}).map((_,i)=><div key={"e"+i}/>)}
+                {Array.from({length:daysInMonth}).map((_,i)=>{
+                  const day = String(i+1).padStart(2,"0");
+                  const tasks = tasksByDay[day]||[];
+                  return(
+                    <div key={day} style={{background:tasks.length?C.acBg:C.s1,border:`1px solid ${tasks.length?C.accent+"44":C.faint}`,borderRadius:4,padding:4,minHeight:48,position:"relative"}}>
+                      <div style={{fontSize:10,color:tasks.length?C.accent:C.dim,fontWeight:tasks.length?700:400}}>{i+1}</div>
+                      {tasks.map((t,ti)=>(
+                        <div key={ti} style={{fontSize:8,color:C.text,background:C.accent+"22",borderRadius:2,padding:"1px 3px",marginTop:2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={t.titulo}>{t.titulo.slice(0,15)}</div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }
@@ -4113,6 +4218,8 @@ function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
         </div>
       )}
     </div>
+      )}
+    </div>
   );
 }
 
@@ -4171,9 +4278,10 @@ function PdfViewer({ url, leituraId, colId, onProgress }) {
     </div>
   );
 }
-function LeiturasTab({ leituras, setLeituras, role }) {
+function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setReadProgress }) {
   const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
   const [adding, setAdding] = useState(false);
+  const [viewingPdf, setViewingPdf] = useState(null);
 
   const addLeitura = () => {
     if(!form.titulo||!form.link) return;
@@ -4183,6 +4291,35 @@ function LeiturasTab({ leituras, setLeituras, role }) {
 
   return (
     <div style={{padding:20,maxWidth:760}}>
+      {viewingPdf ? (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
+            <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
+          </div>
+          {role==="gestor" ? (
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {COLUMNISTS.map(col=>{
+                const prog=(readProgress[col.id]||{})[viewingPdf.id];
+                const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
+                return(
+                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
+                    <Avatar sigla={col.sigla} size={26}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
+                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
+                    </div>
+                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <PdfViewer url={viewingPdf.link} leituraId={viewingPdf.id} colId={user?.colId}
+              onProgress={(page,total)=>{ if(setReadProgress&&user?.colId) setReadProgress(user.colId,viewingPdf.id,page,total); }}/>
+          )}
+        </div>
+      ) : (
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Leituras Essenciais</div>
@@ -4191,28 +4328,72 @@ function LeiturasTab({ leituras, setLeituras, role }) {
         {role==="gestor"&&<Btn variant="primary" small onClick={()=>setAdding(true)}>+ Adicionar</Btn>}
       </div>
 
-      {leituras.length===0
-        ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhuma leitura cadastrada ainda.</div>
-        :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {leituras.map((l,idx)=>{
-            const ec=ED_COLORS[l.editoria]||C.muted;
-            return(
-              <div key={l.id||idx} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start"}}>
-                <div style={{flex:1}}>
-                  {l.editoria&&<div style={{fontSize:10,color:ec,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l.editoria}</div>}
-                  <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{l.titulo}</div>
-                  {l.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:6}}>{l.descricao}</div>}
-                  <a href={l.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,wordBreak:"break-all"}}>{l.link}</a>
-                </div>
-                {role==="gestor"&&(
-                  <button onClick={()=>setLeituras(prev=>prev.filter((_,i)=>i!==idx))}
-                    style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
-                )}
+      {viewingPdf ? (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
+            <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
+          </div>
+          {role==="gestor" ? (
+            <div>
+              <Label>Progresso dos colunistas</Label>
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+                {COLUMNISTS.map(col=>{
+                  const prog=(readProgress[col.id]||{})[viewingPdf.id];
+                  const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
+                  return(
+                    <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px"}}>
+                      <Avatar sigla={col.sigla} size={26}/>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
+                        {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total} · {new Date(prog.lastRead).toLocaleDateString("pt-BR")}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
+                      </div>
+                      <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ) : (
+            <PdfViewer url={viewingPdf.link} leituraId={viewingPdf.id} colId={user?.colId}
+              onProgress={(page,total)=>{ if(setReadProgress&&user?.colId) setReadProgress(user.colId,viewingPdf.id,page,total); }}/>
+          )}
         </div>
-      }
+      ) : (
+        <>
+          {leituras.length===0
+            ?<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:14}}>Nenhuma leitura cadastrada ainda.</div>
+            :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {leituras.map((l,idx)=>{
+                const ec=ED_COLORS[l.editoria]||C.muted;
+                const prog=role==="colunista"?(readProgress[user?.colId]||{})[l.id]:null;
+                const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
+                const allProg=role==="gestor"?COLUMNISTS.map(c=>(readProgress[c.id]||{})[l.id]).filter(Boolean):[];
+                const avgPct=allProg.length?Math.round(allProg.reduce((a,p)=>a+(p.total?p.page/p.total:0),0)/allProg.length*100):0;
+                return(
+                  <div key={l.id||idx} onClick={()=>setViewingPdf(l)}
+                    style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start",cursor:"pointer"}}>
+                    <div style={{flex:1}}>
+                      {l.editoria&&<div style={{fontSize:10,color:ec,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l.editoria}</div>}
+                      <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{l.titulo}</div>
+                      {l.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:6}}>{l.descricao}</div>}
+                      {role==="colunista"&&pct>0&&<div style={{background:C.s2,borderRadius:4,height:4,overflow:"hidden",marginTop:4}}><div style={{width:`${pct}%`,background:pct===100?C.green:C.accent,height:"100%"}}/></div>}
+                      {role==="gestor"&&avgPct>0&&<div style={{fontSize:10,color:C.dim,marginTop:4}}>{allProg.length} lendo · média {avgPct}%</div>}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+                      {role==="colunista"&&<div style={{fontSize:12,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct>0?`${pct}%`:"Ler"}</div>}
+                      {role==="gestor"&&(
+                        <button onClick={e=>{e.stopPropagation();setLeituras(prev=>prev.filter((_,i)=>i!==idx));}}
+                          style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:16,flexShrink:0}}>×</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          }
+        </>
+      )}
 
       {adding&&(
         <Modal title="Adicionar Leitura" onClose={()=>setAdding(false)}>
@@ -4232,7 +4413,8 @@ function LeiturasTab({ leituras, setLeituras, role }) {
 }
 
 // ── Trilha de Aprendizado (PDFs por editoria) ─────────────────────────────
-function TrilhaTab({ trilha, setTrilha, role, colunista }) {
+function TrilhaTab({ trilha, setTrilha, role, colunista, user, readProgress={}, setReadProgress }) {
+  const [viewingPdf, setViewingPdf] = useState(null);
   const [form, setForm] = useState({titulo:"",link:"",editoria:"",descricao:""});
   const [adding, setAdding] = useState(false);
 
@@ -4253,6 +4435,35 @@ function TrilhaTab({ trilha, setTrilha, role, colunista }) {
 
   return (
     <div style={{padding:20,maxWidth:760}}>
+      {viewingPdf ? (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
+            <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
+          </div>
+          {role==="gestor" ? (
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {COLUMNISTS.map(col=>{
+                const prog=(readProgress[col.id]||{})[viewingPdf.id];
+                const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
+                return(
+                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
+                    <Avatar sigla={col.sigla} size={26}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
+                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
+                    </div>
+                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <PdfViewer url={viewingPdf.link} leituraId={viewingPdf.id} colId={user?.colId}
+              onProgress={(page,total)=>{ if(setReadProgress&&user?.colId) setReadProgress(user.colId,viewingPdf.id,page,total); }}/>
+          )}
+        </div>
+      ) : (
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Trilha de Aprendizado</div>
@@ -4277,7 +4488,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista }) {
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:6,paddingLeft:12}}>
                   {items.map((item,idx)=>(
-                    <div key={item.id||idx} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                    <div key={item.id||idx} onClick={()=>item.link?.endsWith(".pdf")?setViewingPdf(item):window.open(item.link,"_blank")} style={{background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"12px 14px",display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer"}}>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:3}}>{item.titulo}</div>
                         {item.descricao&&<div style={{fontSize:12,color:C.muted,marginBottom:4}}>{item.descricao}</div>}
@@ -4307,7 +4518,7 @@ function TrilhaTab({ trilha, setTrilha, role, colunista }) {
             <div><Label>Título *</Label><Input value={form.titulo} onChange={v=>setForm(f=>({...f,titulo:v}))} placeholder="Nome do material"/></div>
             <div><Label>Link ou URL do PDF *</Label><Input value={form.link} onChange={v=>setForm(f=>({...f,link:v}))} placeholder="https://... (PDF, artigo, vídeo)"/></div>
             <div><Label>Descrição</Label><Input value={form.descricao} onChange={v=>setForm(f=>({...f,descricao:v}))} placeholder="Breve descrição"/></div>
-            <Btn variant="primary" onClick={addItem} disabled={!form.titulo||!form.link||!form.editoria}>Salvar</Btn>
+            <Btn variant="primary" onClick={addItem} disabled={!form.titulo||!form.link}>Salvar</Btn>
           </div>
         </Modal>
       )}
@@ -4333,6 +4544,8 @@ export default function App() {
   const [contrapartidas, setContrapartidas] = useState({});
   const [contraExtra, setContraExtraState] = useState({});
   const [readProgress, setReadProgressState] = useState({});
+  const [theme, setTheme] = useState("dark");
+
   const [calendar, setCalendar] = useState({});
   const [calPautas, setCalPautasState] = useState({});
   const [notifications, setNotifications] = useState([]);
@@ -4632,7 +4845,7 @@ export default function App() {
   return (
     <div
       style={{
-        background: C.bg,
+        background: theme==="light"?"#f4f4f4":C.bg,
         minHeight: "100vh",
         fontFamily: C.fontBase,
         color: C.text,
@@ -4654,6 +4867,8 @@ export default function App() {
         }}
         gsStatus={gsStatus}
         contraExtra={contraExtra}
+        theme={theme}
+        setTheme={setTheme}
       />
       {user.role === "gestor" ? (
         <>
@@ -4706,10 +4921,10 @@ export default function App() {
             <BriefingTab briefings={briefings} addBriefing={addBriefing} texts={texts} updateTextStatus={updateTextStatus}/>
           )}
           {tab === "leituras" && (
-            <LeiturasTab leituras={leituras} setLeituras={setLeituras} role="gestor"/>
+            <LeiturasTab leituras={leituras} setLeituras={setLeituras} role="gestor" user={user} readProgress={readProgress} setReadProgress={setReadProgress}/>
           )}
           {tab === "trilha" && (
-            <TrilhaTab trilha={trilha} setTrilha={setTrilha} role="gestor"/>
+            <TrilhaTab trilha={trilha} setTrilha={setTrilha} role="gestor" user={user} readProgress={readProgress} setReadProgress={setReadProgress}/>
           )}
         </>
       ) : (
@@ -4756,93 +4971,93 @@ export default function App() {
     </div>
   );
 }const TASK_SCHEDULE = [
-  {id:20000,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_0"},
-  {id:20001,colId:6,colunistaNome:"Matheus Theodore",titulo:"Comunidade BDSM e por que é acolhedora para corpos dissidentes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_1"},
-  {id:20002,colId:6,colunistaNome:"Matheus Theodore",titulo:"Juventude preta com gênero fluido e expressões pouco populares",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_2"},
-  {id:20003,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_0"},
-  {id:20004,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_1"},
-  {id:20005,colId:9,colunistaNome:"Moon Kenzo",titulo:"A Solidão de Quem Transcende: O preço de não ser a fácil",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_2"},
-  {id:20006,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-17",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_0"},
-  {id:20007,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Pajubá e Gualín do TTK: dialetos nascidos na ditadura militar",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_1"},
-  {id:20008,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Segregades do amor: a comunidade trans e a exclusão do amor romântico",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_2"},
-  {id:20009,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Desconstrução da cisheteronormatividade na arte contemporânea",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_0"},
-  {id:20010,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Estética do desejo dissidente e as Não-Imagens",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_1"},
-  {id:20011,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Ficção científica como ferramenta de autoconhecimento LGBTQIA+",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_2"},
-  {id:20012,colId:13,colunistaNome:"Isabella Piana",titulo:"Como a heterossexualidade compulsória ainda exige que LGBT performem papéis tradicionais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-24",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_0"},
+  {id:20000,colId:6,colunistaNome:"Matheus Theodore",titulo:"Jornada do azarão: como corpos marginalizados criam novas narrativas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_0"},
+  {id:20001,colId:6,colunistaNome:"Matheus Theodore",titulo:"Comunidade BDSM e por que é acolhedora para corpos dissidentes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_1"},
+  {id:20002,colId:6,colunistaNome:"Matheus Theodore",titulo:"Juventude preta com gênero fluido e expressões pouco populares",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"6_2"},
+  {id:20003,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_0"},
+  {id:20004,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_1"},
+  {id:20005,colId:9,colunistaNome:"Moon Kenzo",titulo:"A Solidão de Quem Transcende: O preço de não ser a fácil",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_2"},
+  {id:20006,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-24",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_0"},
+  {id:20007,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Pajubá e Gualín do TTK: dialetos nascidos na ditadura militar",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-27",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_1"},
+  {id:20008,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Segregades do amor: a comunidade trans e a exclusão do amor romântico",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_2"},
+  {id:20009,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Desconstrução da cisheteronormatividade na arte contemporânea",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-24",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_0"},
+  {id:20010,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Estética do desejo dissidente e as Não-Imagens",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_1"},
+  {id:20011,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Ficção científica como ferramenta de autoconhecimento LGBTQIA+",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_2"},
+  {id:20012,colId:13,colunistaNome:"Isabella Piana",titulo:"Como a heterossexualidade compulsória ainda exige que LGBT performem papéis tradicionais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-26",dataEntrega:"2026-06-23",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_0"},
   {id:20013,colId:13,colunistaNome:"Isabella Piana",titulo:"Como a pornografia molda nossos relacionamentos e a cultura",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_1"},
-  {id:20014,colId:13,colunistaNome:"Isabella Piana",titulo:"Isso é mais queer do que você pensa: o que a cultura queer criou e a heteronormatividade apropriou",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_2"},
-  {id:20015,colId:14,colunistaNome:"Raphael Mello",titulo:"Entre o desejo e a sobrevivência: relacionamentos LGBT e afeto na contemporaneidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_0"},
-  {id:20016,colId:14,colunistaNome:"Raphael Mello",titulo:"Corpos desejáveis, corpos descartáveis: o mercado afetivo dentro da comunidade LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_1"},
-  {id:20017,colId:14,colunistaNome:"Raphael Mello",titulo:"Quando sair do armário não basta: marcas psíquicas da colonialidade nos afetos LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_2"},
-  {id:20018,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Não-monogamia é mesmo uma política subversiva para homens gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-05",dataEntrega:"2026-07-31",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_0"},
-  {id:20019,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"O corpo musculoso da bicha é um problema para quem",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-05",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_1"},
-  {id:20020,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Por que o gay preto é pra sexo e o gay branco é pra namoro — uma análise racial dos afetos gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_2"},
-  {id:20021,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Como a geração Z está preservando e inovando os ballrooms",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_0"},
-  {id:20022,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Entrevistas LGBTQIAPN+ das décadas de 50 a 90 com documentos de memória afetiva",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_1"},
-  {id:20023,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"O que as práticas sexuais de pessoas trans revelam sobre como a sociedade as enxerga",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_2"},
-  {id:20024,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Sexo, afeto e liberdade: desaprendendo padrões para criar relações mais honestas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-07",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_0"},
-  {id:20025,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"O corpo como território político: o que nossos desejos dizem sobre quem somos",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_1"},
-  {id:20026,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Prazer também é política: como o corpo se torna espaço de autonomia e resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_2"},
-  {id:20027,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Vida e memória insubmissas de pessoas LGBTQIA+ interioranas",editoria:"História e Memória Política",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_0"},
-  {id:20028,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Economia política do sexo no mundo globalizado",editoria:"História e Memória Política",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_1"},
-  {id:20029,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Relações de gênero e educação voltadas à diferença",editoria:"História e Memória Política",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_2"},
-  {id:20030,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"O corpo do artista queer contemporâneo: na poesia, no teatro, na fotografia",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_0"},
-  {id:20031,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"Literatura lésbica brasileira: o erotismo nas obras",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_1"},
-  {id:20032,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"A rua e o flâneur queer: sempre estivemos nas ruas e a rua sempre foi o lugar do nosso desejo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_2"},
-  {id:20033,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpos femininos e a proteção contra ISTs",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_0"},
-  {id:20034,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpo e Ocupação: em quais lugares estamos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_1"},
-  {id:20035,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Quem dita a palavra do corpo feminino",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_2"},
-  {id:20036,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Do queer ao cuir: a dissidência reinventada pelo cinema latino-americano",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-21",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_0"},
-  {id:20037,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Cinema queer nordestino: corpos dissidentes longe do eixo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_1"},
-  {id:20038,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"O fim inevitável: repensando o sofrimento LGBTQIA+ nas telas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_2"},
-  {id:20039,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Discutindo relações gays: dinâmicas e tabus",editoria:"História e Memória Política",dataPublicacao:"2026-08-28",dataEntrega:"2026-08-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_0"},
-  {id:20040,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Homens gays 40+: escolhas e sacrifícios",editoria:"História e Memória Política",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_1"},
-  {id:20041,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Solidão homoafetiva e seus desafios",editoria:"História e Memória Política",dataPublicacao:"2026-08-31",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_2"},
-  {id:20042,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O techno como expoente queer no Brasil e no mundo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-28",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_0"},
-  {id:20043,colId:25,colunistaNome:"Arthur Monteiro",titulo:"Dez anos da MPB mais queer que nunca: linha temporal 2016-2026",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_1"},
-  {id:20044,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O preço de ser LGBT na cultura pop dos anos 80",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_2"},
-  {id:20045,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"Quem tem medo de gênero nas escolas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_0"},
-  {id:20046,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A nova pornografia política: deepfakes sexuais como arma",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_1"},
-  {id:20047,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A bancada do pânico moral: quando proteger crianças vira desculpa para apagar diversidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_2"},
-  {id:20048,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"SEXO É SÓ TEATRAL: sobre minha redescoberta com a prática sexual",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_0"},
-  {id:20049,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"XUXA E A INSERÇÃO QUEER NA TV",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_1"},
-  {id:20050,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"GRAFISMO DE MULHERES CIS E TRANS: arte e expressão no interior de Pernambuco",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_2"},
-  {id:20051,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Hannah de Girls e a relação com o corpo enquanto pessoa gorda",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_0"},
-  {id:20052,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Paralelos entre cultura pop e experiências pessoais LGBTQ+",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_1"},
-  {id:20053,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"A escrita como necessidade: quando o outro me reconhece no texto",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_2"},
-  {id:20054,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Masturbação: tabus e revelações",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-11",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_0"},
-  {id:20055,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Banheiros masculinos como espaço de sociabilidade e repressão",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_1"},
+  {id:20014,colId:13,colunistaNome:"Isabella Piana",titulo:"Isso é mais queer do que você pensa: o que a cultura queer criou e a heteronormatividade apropriou",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"13_2"},
+  {id:20015,colId:14,colunistaNome:"Raphael Mello",titulo:"Entre o desejo e a sobrevivência: relacionamentos LGBT e afeto na contemporaneidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-26",dataEntrega:"2026-06-23",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_0"},
+  {id:20016,colId:14,colunistaNome:"Raphael Mello",titulo:"Corpos desejáveis, corpos descartáveis: o mercado afetivo dentro da comunidade LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_1"},
+  {id:20017,colId:14,colunistaNome:"Raphael Mello",titulo:"Quando sair do armário não basta: marcas psíquicas da colonialidade nos afetos LGBT",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-02",dataEntrega:"2026-08-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"14_2"},
+  {id:20018,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Não-monogamia é mesmo uma política subversiva para homens gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-29",dataEntrega:"2026-06-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_0"},
+  {id:20019,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"O corpo musculoso da bicha é um problema para quem",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-31",dataEntrega:"2026-07-28",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_1"},
+  {id:20020,colId:15,colunistaNome:"Eduardo Barbosa",titulo:"Por que o gay preto é pra sexo e o gay branco é pra namoro — uma análise racial dos afetos gays",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"15_2"},
+  {id:20021,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Como a geração Z está preservando e inovando os ballrooms",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-06-29",dataEntrega:"2026-06-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_0"},
+  {id:20022,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"Entrevistas LGBTQIAPN+ das décadas de 50 a 90 com documentos de memória afetiva",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_1"},
+  {id:20023,colId:16,colunistaNome:"Callisto Jasmim Rodrigues Melo",titulo:"O que as práticas sexuais de pessoas trans revelam sobre como a sociedade as enxerga",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-04",dataEntrega:"2026-09-01",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"16_2"},
+  {id:20024,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Sexo, afeto e liberdade: desaprendendo padrões para criar relações mais honestas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-01",dataEntrega:"2026-06-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_0"},
+  {id:20025,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"O corpo como território político: o que nossos desejos dizem sobre quem somos",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-03",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_1"},
+  {id:20026,colId:18,colunistaNome:"Guilherme Clisma Araujo de Sousa",titulo:"Prazer também é política: como o corpo se torna espaço de autonomia e resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"18_2"},
+  {id:20027,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Vida e memória insubmissas de pessoas LGBTQIA+ interioranas",editoria:"História e Memória Política",dataPublicacao:"2026-07-01",dataEntrega:"2026-06-26",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_0"},
+  {id:20028,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Economia política do sexo no mundo globalizado",editoria:"História e Memória Política",dataPublicacao:"2026-08-05",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_1"},
+  {id:20029,colId:20,colunistaNome:"José Luiz Alves Neto",titulo:"Relações de gênero e educação voltadas à diferença",editoria:"História e Memória Política",dataPublicacao:"2026-09-07",dataEntrega:"2026-09-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"20_2"},
+  {id:20030,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"O corpo do artista queer contemporâneo: na poesia, no teatro, na fotografia",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-03",dataEntrega:"2026-06-30",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_0"},
+  {id:20031,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"Literatura lésbica brasileira: o erotismo nas obras",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-05",dataEntrega:"2026-07-31",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_1"},
+  {id:20032,colId:21,colunistaNome:"Mariana Freire de Moraes",titulo:"A rua e o flâneur queer: sempre estivemos nas ruas e a rua sempre foi o lugar do nosso desejo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-04",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"21_2"},
+  {id:20033,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpos femininos e a proteção contra ISTs",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-03",dataEntrega:"2026-06-30",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_0"},
+  {id:20034,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Corpo e Ocupação: em quais lugares estamos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_1"},
+  {id:20035,colId:22,colunistaNome:"Rafaela Silva Mancini",titulo:"Quem dita a palavra do corpo feminino",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-09-09",dataEntrega:"2026-09-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"22_2"},
+  {id:20036,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Do queer ao cuir: a dissidência reinventada pelo cinema latino-americano",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-06",dataEntrega:"2026-07-03",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_0"},
+  {id:20037,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"Cinema queer nordestino: corpos dissidentes longe do eixo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-07",dataEntrega:"2026-08-04",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_1"},
+  {id:20038,colId:23,colunistaNome:"Hayllon Pessoa",titulo:"O fim inevitável: repensando o sofrimento LGBTQIA+ nas telas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"23_2"},
+  {id:20039,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Discutindo relações gays: dinâmicas e tabus",editoria:"História e Memória Política",dataPublicacao:"2026-07-06",dataEntrega:"2026-07-03",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_0"},
+  {id:20040,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Homens gays 40+: escolhas e sacrifícios",editoria:"História e Memória Política",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_1"},
+  {id:20041,colId:24,colunistaNome:"Jaime Santana Neto",titulo:"Solidão homoafetiva e seus desafios",editoria:"História e Memória Política",dataPublicacao:"2026-09-11",dataEntrega:"2026-09-08",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"24_2"},
+  {id:20042,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O techno como expoente queer no Brasil e no mundo",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-08",dataEntrega:"2026-07-03",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_0"},
+  {id:20043,colId:25,colunistaNome:"Arthur Monteiro",titulo:"Dez anos da MPB mais queer que nunca: linha temporal 2016-2026",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-10",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_1"},
+  {id:20044,colId:25,colunistaNome:"Arthur Monteiro",titulo:"O preço de ser LGBT na cultura pop dos anos 80",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"25_2"},
+  {id:20045,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"Quem tem medo de gênero nas escolas",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-08",dataEntrega:"2026-07-03",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_0"},
+  {id:20046,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A nova pornografia política: deepfakes sexuais como arma",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_1"},
+  {id:20047,colId:28,colunistaNome:"Hélio Lucas Carvalho Gonçalves",titulo:"A bancada do pânico moral: quando proteger crianças vira desculpa para apagar diversidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-14",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"28_2"},
+  {id:20048,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"SEXO É SÓ TEATRAL: sobre minha redescoberta com a prática sexual",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_0"},
+  {id:20049,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"XUXA E A INSERÇÃO QUEER NA TV",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-12",dataEntrega:"2026-08-07",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_1"},
+  {id:20050,colId:29,colunistaNome:"Lucas José Oliveira Souza",titulo:"GRAFISMO DE MULHERES CIS E TRANS: arte e expressão no interior de Pernambuco",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-11",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"29_2"},
+  {id:20051,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Hannah de Girls e a relação com o corpo enquanto pessoa gorda",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_0"},
+  {id:20052,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"Paralelos entre cultura pop e experiências pessoais LGBTQ+",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_1"},
+  {id:20053,colId:30,colunistaNome:"Pedro Augusto Pinto Luz",titulo:"A escrita como necessidade: quando o outro me reconhece no texto",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-16",dataEntrega:"2026-09-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"30_2"},
+  {id:20054,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Masturbação: tabus e revelações",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-13",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_0"},
+  {id:20055,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Banheiros masculinos como espaço de sociabilidade e repressão",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-14",dataEntrega:"2026-08-11",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_1"},
   {id:20056,colId:33,colunistaNome:"Vicente Buccarini",titulo:"Cultura tecno e os corpos que a habitam",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-18",dataEntrega:"2026-09-15",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"33_2"},
-  {id:20057,colId:34,colunistaNome:"Isabela",titulo:"Direitos reprodutivos: pautas para corpos que geram",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-18",dataEntrega:"2026-09-15",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_0"},
-  {id:20058,colId:34,colunistaNome:"Isabela",titulo:"Gênero e identidade étnica: a emancipação das mulheres árabes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_1"},
-  {id:20059,colId:34,colunistaNome:"Isabela",titulo:"Cultura da pista de dança (ballroom, vogue) e histórias de resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_2"},
-  {id:20060,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Espelhos Distorcidos: deepfakes pornôs contra mulheres na política",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_0"},
-  {id:20061,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Do romance de banca ao áudio por assinatura: erotismo pensado para mulheres",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_1"},
-  {id:20062,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Milo J e ancestralidade como disputa por pertencimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-25",dataEntrega:"2026-09-22",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_2"},
-  {id:20063,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A mulher cis e a masturbação: tabu e normalidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-25",dataEntrega:"2026-09-22",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_0"},
-  {id:20064,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"O trabalho sexual na contemporaneidade: neoliberalismo e OnlyFans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-28",dataEntrega:"2026-09-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_1"},
-  {id:20065,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A teoria queer através de Gayle Rubin",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-28",dataEntrega:"2026-09-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_2"},
-  {id:20066,colId:38,colunistaNome:"Jean",titulo:"Abuso sexual de meninos gays: o silêncio que adoece",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-30",dataEntrega:"2026-09-25",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_0"},
-  {id:20067,colId:38,colunistaNome:"Jean",titulo:"Pornografia na construção do imaginário erótico gay",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-30",dataEntrega:"2026-09-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_1"},
-  {id:20068,colId:38,colunistaNome:"Jean",titulo:"Como o belohorizontino flerta fora dos aplicativos",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-02",dataEntrega:"2026-09-29",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_2"},
-  {id:20069,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A construção histórica da monogamia como modelo dominante",editoria:"História e Memória Política",dataPublicacao:"2026-10-02",dataEntrega:"2026-09-29",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_0"},
-  {id:20070,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A ausência de referências LGBTQIAPN+ durante a infância",editoria:"História e Memória Política",dataPublicacao:"2026-10-05",dataEntrega:"2026-10-02",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_1"},
-  {id:20071,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"Por que os homens ocupam posição de sujeito nas narrativas sobre sexo",editoria:"História e Memória Política",dataPublicacao:"2026-10-05",dataEntrega:"2026-10-02",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_2"},
-  {id:20072,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A comunidade queer é cronicamente online",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-07",dataEntrega:"2026-10-02",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_0"},
-  {id:20073,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"O que o BDSM pode ensinar sobre comunicação e consentimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-07",dataEntrega:"2026-10-02",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_1"},
-  {id:20074,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A linguagem queer secreta: códigos e encontros antes da era digital",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-09",dataEntrega:"2026-10-06",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_2"},
-  {id:20075,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"A ausência de lésbicas masc na dramaturgia brasileira",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-09",dataEntrega:"2026-10-06",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_0"},
-  {id:20076,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Novas possibilidades imagéticas da experiência lésbica",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-12",dataEntrega:"2026-10-09",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_1"},
-  {id:20077,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Qual a conceptualização discursiva da mulher sáfica nas redes sociais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-12",dataEntrega:"2026-10-09",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_2"},
-  {id:20078,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Masculinidades trans em pauta: Como faz a barba",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-14",dataEntrega:"2026-10-09",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_0"},
-  {id:20079,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Existe amor para esse corpo trans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-14",dataEntrega:"2026-10-09",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_1"},
-  {id:20080,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Pode um homem trans ser jogador de futebol",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-16",dataEntrega:"2026-10-13",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_2"},
-  {id:20081,colId:53,colunistaNome:"Débora Adones",titulo:"A vivência LGBTQ+ nas cidades de pequeno porte do Brasil",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-16",dataEntrega:"2026-10-13",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_0"},
-  {id:20082,colId:53,colunistaNome:"Débora Adones",titulo:"Como personagens explosivos fazem alusão à vivência queer no cinema",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-19",dataEntrega:"2026-10-16",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_1"},
-  {id:20083,colId:53,colunistaNome:"Débora Adones",titulo:"A democratização da educação sexual LGBTQ+ pela internet",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-10-19",dataEntrega:"2026-10-16",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_2"},
-  {id:20084,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo em locais públicos como cartografia do desejo nas cidades",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-21",dataEntrega:"2026-10-16",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_0"},
-  {id:20085,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo e o ambiente da política brasileira",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-21",dataEntrega:"2026-10-16",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_1"},
-  {id:20086,colId:56,colunistaNome:"Lucas Brito",titulo:"Quanto mais sexo, menos sexo: jovens e a recessão sexual",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-10-23",dataEntrega:"2026-10-20",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_2"}
+  {id:20057,colId:34,colunistaNome:"Isabela",titulo:"Direitos reprodutivos: pautas para corpos que geram",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-13",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_0"},
+  {id:20058,colId:34,colunistaNome:"Isabela",titulo:"Gênero e identidade étnica: a emancipação das mulheres árabes",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_1"},
+  {id:20059,colId:34,colunistaNome:"Isabela",titulo:"Cultura da pista de dança (ballroom, vogue) e histórias de resistência",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-18",dataEntrega:"2026-09-15",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"34_2"},
+  {id:20060,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Espelhos Distorcidos: deepfakes pornôs contra mulheres na política",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_0"},
+  {id:20061,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Do romance de banca ao áudio por assinatura: erotismo pensado para mulheres",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-17",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_1"},
+  {id:20062,colId:35,colunistaNome:"Maria Clara Rocha e Silva",titulo:"Milo J e ancestralidade como disputa por pertencimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"35_2"},
+  {id:20063,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A mulher cis e a masturbação: tabu e normalidade",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-15",dataEntrega:"2026-07-10",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_0"},
+  {id:20064,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"O trabalho sexual na contemporaneidade: neoliberalismo e OnlyFans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_1"},
+  {id:20065,colId:37,colunistaNome:"Maria Eduarda Amorim",titulo:"A teoria queer através de Gayle Rubin",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-21",dataEntrega:"2026-09-18",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"37_2"},
+  {id:20066,colId:38,colunistaNome:"Jean",titulo:"Abuso sexual de meninos gays: o silêncio que adoece",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_0"},
+  {id:20067,colId:38,colunistaNome:"Jean",titulo:"Pornografia na construção do imaginário erótico gay",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-08-19",dataEntrega:"2026-08-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_1"},
+  {id:20068,colId:38,colunistaNome:"Jean",titulo:"Como o belohorizontino flerta fora dos aplicativos",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"38_2"},
+  {id:20069,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A construção histórica da monogamia como modelo dominante",editoria:"História e Memória Política",dataPublicacao:"2026-07-17",dataEntrega:"2026-07-14",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_0"},
+  {id:20070,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"A ausência de referências LGBTQIAPN+ durante a infância",editoria:"História e Memória Política",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_1"},
+  {id:20071,colId:39,colunistaNome:"Ágatha Sirigni Nunes",titulo:"Por que os homens ocupam posição de sujeito nas narrativas sobre sexo",editoria:"História e Memória Política",dataPublicacao:"2026-09-23",dataEntrega:"2026-09-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"39_2"},
+  {id:20072,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A comunidade queer é cronicamente online",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_0"},
+  {id:20073,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"O que o BDSM pode ensinar sobre comunicação e consentimento",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-21",dataEntrega:"2026-08-18",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_1"},
+  {id:20074,colId:43,colunistaNome:"Amanda Alves Braga",titulo:"A linguagem queer secreta: códigos e encontros antes da era digital",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-25",dataEntrega:"2026-09-22",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"43_2"},
+  {id:20075,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"A ausência de lésbicas masc na dramaturgia brasileira",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-20",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_0"},
+  {id:20076,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Novas possibilidades imagéticas da experiência lésbica",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_1"},
+  {id:20077,colId:46,colunistaNome:"Maria Eduarda Neves Costa",titulo:"Qual a conceptualização discursiva da mulher sáfica nas redes sociais",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-25",dataEntrega:"2026-09-22",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"46_2"},
+  {id:20078,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Masculinidades trans em pauta: Como faz a barba",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_0"},
+  {id:20079,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Existe amor para esse corpo trans",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-24",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_1"},
+  {id:20080,colId:52,colunistaNome:"Gabriel Jóia de Macedo",titulo:"Pode um homem trans ser jogador de futebol",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-28",dataEntrega:"2026-09-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"52_2"},
+  {id:20081,colId:53,colunistaNome:"Débora Adones",titulo:"A vivência LGBTQ+ nas cidades de pequeno porte do Brasil",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-07-22",dataEntrega:"2026-07-17",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_0"},
+  {id:20082,colId:53,colunistaNome:"Débora Adones",titulo:"Como personagens explosivos fazem alusão à vivência queer no cinema",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_1"},
+  {id:20083,colId:53,colunistaNome:"Débora Adones",titulo:"A democratização da educação sexual LGBTQ+ pela internet",editoria:"Cultura Queer e Trans",dataPublicacao:"2026-09-28",dataEntrega:"2026-09-25",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"53_2"},
+  {id:20084,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo em locais públicos como cartografia do desejo nas cidades",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-24",dataEntrega:"2026-07-21",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_0"},
+  {id:20085,colId:56,colunistaNome:"Lucas Brito",titulo:"Sexo e o ambiente da política brasileira",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-08-26",dataEntrega:"2026-08-21",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_1"},
+  {id:20086,colId:56,colunistaNome:"Lucas Brito",titulo:"Quanto mais sexo, menos sexo: jovens e a recessão sexual",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-09-30",dataEntrega:"2026-09-25",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"56_2"}
 ];
 
 
