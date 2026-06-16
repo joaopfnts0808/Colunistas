@@ -3049,40 +3049,6 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
               ))}
             </div>
           )}
-        </div>
-        <div>
-          <Label>Entregas previstas ({meTexts.length})</Label>
-          {meTexts.length === 0 ? (
-            <div style={{ fontSize: 12, color: C.dim, padding: "16px 0" }}>
-              Nenhuma entrega agendada.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {meTexts.map((t) => (
-                <div
-                  key={t.id}
-                  style={{
-                    background: C.s1,
-                    border: `1px solid ${C.faint}`,
-                    borderRadius: 4,
-                    padding: "10px 12px",
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t.titulo}</div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap:"wrap", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, color: C.dim }}>{t.colunistaNome}</span>
-                    <StatusBadge status={t.status} />
-                  </div>
-                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                    {t.dataEntrega&&<span style={{fontSize:10,color:C.amber}}>📝 Entrega: {new Date(t.dataEntrega).toLocaleDateString("pt-BR")}</span>}
-                    {t.dataPublicacao&&<span style={{fontSize:10,color:C.accent}}>🚀 Publicação: {new Date(t.dataPublicacao).toLocaleDateString("pt-BR")}</span>}
-                  </div>
-                  {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.purple,display:"block",marginTop:4,wordBreak:"break-all"}}>{t.link}</a>}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       <div>
@@ -3921,7 +3887,7 @@ function MeuCalendarioTab({ texts=[], colunista }) {
       <div style={{fontSize:12,color:C.muted,marginBottom:20}}>Suas datas de entrega e publicação.</div>
       {months.length===0 ? (
         <div style={{textAlign:"center",padding:40,color:C.dim}}>Nenhuma tarefa com data definida.</div>
-      ) : viewMode==="lista" ? months.map(mk=>{
+      ) : viewMode==="lista" ? (<>{months.map(mk=>{
             const [y,m]=mk.split("-");
             return(
               <div key={mk} style={{marginBottom:24}}>
@@ -3947,40 +3913,41 @@ function MeuCalendarioTab({ texts=[], colunista }) {
                 </div>
               </div>
             );
-          })
-      ) : (
-        // Grade view
-        months.map(mk=>{
-          const [y,m]=mk.split("-");
-          const daysInMonth = new Date(parseInt(y),parseInt(m),0).getDate();
-          const firstDay = new Date(parseInt(y),parseInt(m)-1,1).getDay();
-          const tasksByDay = {};
-          byMonth[mk].forEach(t=>{
-            const d = (t.dataPublicacao||t.dataEntrega||"").split("-")[2];
-            if(d){ if(!tasksByDay[d]) tasksByDay[d]=[]; tasksByDay[d].push(t); }
-          });
-          return(
-            <div key={mk} style={{marginBottom:24}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
-                {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><div key={d} style={{fontSize:9,color:C.dim,textAlign:"center",padding:4,fontWeight:700}}>{d}</div>)}
-                {Array.from({length:firstDay}).map((_,i)=><div key={"e"+i}/>)}
-                {Array.from({length:daysInMonth}).map((_,i)=>{
-                  const day = String(i+1).padStart(2,"0");
-                  const tasks = tasksByDay[day]||[];
-                  return(
-                    <div key={day} style={{background:tasks.length?C.acBg:C.s1,border:`1px solid ${tasks.length?C.accent+"44":C.faint}`,borderRadius:4,padding:4,minHeight:48,position:"relative"}}>
-                      <div style={{fontSize:10,color:tasks.length?C.accent:C.dim,fontWeight:tasks.length?700:400}}>{i+1}</div>
-                      {tasks.map((t,ti)=>(
-                        <div key={ti} style={{fontSize:8,color:C.text,background:C.accent+"22",borderRadius:2,padding:"1px 3px",marginTop:2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={t.titulo}>{t.titulo.slice(0,15)}</div>
-                      ))}
-                    </div>
-                  );
-                })}
+          })}
+        </>) : (
+        <>
+          {months.map(mk=>{
+            const [y,m]=mk.split("-");
+            const daysInMonth = new Date(parseInt(y),parseInt(m),0).getDate();
+            const firstDay = new Date(parseInt(y),parseInt(m)-1,1).getDay();
+            const tasksByDay = {};
+            byMonth[mk].forEach(t=>{
+              const d = (t.dataPublicacao||t.dataEntrega||"").split("-")[2];
+              if(d){ if(!tasksByDay[d]) tasksByDay[d]=[]; tasksByDay[d].push(t); }
+            });
+            return(
+              <div key={mk} style={{marginBottom:24}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.accent,fontFamily:C.fontDestaque,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.faint}`,paddingBottom:6}}>{MONTHS[parseInt(m)-1]} {y}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
+                  {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><div key={d} style={{fontSize:9,color:C.dim,textAlign:"center",padding:4,fontWeight:700}}>{d}</div>)}
+                  {Array.from({length:firstDay}).map((_,i)=><div key={"e"+i}/>)}
+                  {Array.from({length:daysInMonth}).map((_,i)=>{
+                    const day = String(i+1).padStart(2,"0");
+                    const tasks = tasksByDay[day]||[];
+                    return(
+                      <div key={day} style={{background:tasks.length?C.acBg:C.s1,border:`1px solid ${tasks.length?C.accent+"44":C.faint}`,borderRadius:4,padding:4,minHeight:48,position:"relative"}}>
+                        <div style={{fontSize:10,color:tasks.length?C.accent:C.dim,fontWeight:tasks.length?700:400}}>{i+1}</div>
+                        {tasks.map((t,ti)=>(
+                          <div key={ti} style={{fontSize:8,color:C.text,background:C.accent+"22",borderRadius:2,padding:"1px 3px",marginTop:2,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={t.titulo}>{t.titulo.slice(0,15)}</div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </>
       )}
     </div>
   );
@@ -4209,8 +4176,6 @@ function BriefingTab({ briefings, addBriefing, texts, updateTextStatus }) {
         </div>
       )}
     </div>
-      )}
-    </div>
   );
 }
 
@@ -4282,35 +4247,6 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
 
   return (
     <div style={{padding:20,maxWidth:760}}>
-      {viewingPdf ? (
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:15,fontWeight:700,fontFamily:C.fontDestaque}}>{viewingPdf.titulo}</div>
-            <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
-          </div>
-          {role==="gestor" ? (
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {COLUMNISTS.map(col=>{
-                const prog=(readProgress[col.id]||{})[viewingPdf.id];
-                const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
-                return(
-                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
-                    <Avatar sigla={col.sigla} size={26}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
-                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
-                    </div>
-                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <PdfViewer url={viewingPdf.link} leituraId={viewingPdf.id} colId={user?.colId}
-              onProgress={(page,total)=>{ if(setReadProgress&&user?.colId) setReadProgress(user.colId,viewingPdf.id,page,total); }}/>
-          )}
-        </div>
-      ) : (
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,fontFamily:C.fontDestaque,marginBottom:2}}>Leituras Essenciais</div>
@@ -4326,24 +4262,21 @@ function LeiturasTab({ leituras, setLeituras, role, user, readProgress={}, setRe
             <Btn small onClick={()=>setViewingPdf(null)}>← Voltar</Btn>
           </div>
           {role==="gestor" ? (
-            <div>
-              <Label>Progresso dos colunistas</Label>
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-                {COLUMNISTS.map(col=>{
-                  const prog=(readProgress[col.id]||{})[viewingPdf.id];
-                  const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
-                  return(
-                    <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px"}}>
-                      <Avatar sigla={col.sigla} size={26}/>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
-                        {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total} · {new Date(prog.lastRead).toLocaleDateString("pt-BR")}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
-                      </div>
-                      <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+              {COLUMNISTS.map(col=>{
+                const prog=(readProgress[col.id]||{})[viewingPdf.id];
+                const pct=prog&&prog.total?Math.round(prog.page/prog.total*100):0;
+                return(
+                  <div key={col.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s1,border:`1px solid ${C.faint}`,borderRadius:6,padding:"8px 12px",marginBottom:4}}>
+                    <Avatar sigla={col.sigla} size={26}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600}}>{col.nome}</div>
+                      {prog?<div style={{fontSize:10,color:C.dim}}>Pág. {prog.page}/{prog.total} · {new Date(prog.lastRead).toLocaleDateString("pt-BR")}</div>:<div style={{fontSize:10,color:C.dim}}>Não iniciou</div>}
                     </div>
-                  );
-                })}
-              </div>
+                    <div style={{fontSize:13,fontWeight:700,color:pct===100?C.green:pct>0?C.amber:C.dim}}>{pct}%</div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <PdfViewer url={viewingPdf.link} leituraId={viewingPdf.id} colId={user?.colId}
