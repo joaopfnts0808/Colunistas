@@ -2171,7 +2171,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
   const [detail, setDetail] = useState(null);
   const [editField, setEditField] = useState({
     briefing: "",
-    prazo: "",
+    dataEntrega: "",
     link: "",
   });
   const unread = notifications.filter((n) => !n.lida);
@@ -2201,7 +2201,7 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
     setDetail(t);
     setEditField({
       briefing: t.briefing || "",
-      prazo: t.prazo || t.dataEntrega || "",
+      dataEntrega: t.dataEntrega || "",
       link: t.link || "",
     });
   };
@@ -2450,9 +2450,9 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                     flexShrink: 0,
                   }}
                 >
-                  {(t.prazo || t.dataEntrega) && (
+                  {(t.dataEntrega) && (
                     <span style={{ fontSize: 11, color: cs.dim }}>
-                      {t.prazo || t.dataEntrega}
+                      {t.dataEntrega}
                     </span>
                   )}
                   <StatusBadge status={t.status} />
@@ -2546,8 +2546,8 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
                   <Label>Prazo / Data de Entrega</Label>
                   <Input
                     type="date"
-                    value={editField.prazo}
-                    onChange={(v) => setEditField((f) => ({ ...f, prazo: v }))}
+                    value={editField.dataEntrega}
+                    onChange={(v) => setEditField((f) => ({ ...f, dataEntrega: v, dateOverridden: true }))}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -2646,7 +2646,7 @@ function IdeiaTab({
     setEditIdeiaData({
       titulo: texto?.titulo || idea.pauta,
       editoria: texto?.editoria || idea.editoria,
-      dataEntrega: texto?.dataEntrega || texto?.prazo || "",
+      dataEntrega: texto?.dataEntrega || "",
       dataPublicacao: texto?.dataPublicacao || "",
       briefing: texto?.briefing || idea.esboco || "",
       link: texto?.link || "",
@@ -2666,6 +2666,7 @@ function IdeiaTab({
         dataPublicacao: editIdeiaData.dataPublicacao,
         briefing: editIdeiaData.briefing,
         link: editIdeiaData.link,
+        dateOverridden: !!(editIdeiaData.dataEntrega || editIdeiaData.dataPublicacao),
       });
     } else {
       // Cria o texto se ainda não existe
@@ -3457,7 +3458,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
     (calendar[c.id] || []).includes(cur.mi)
   );
   const meTexts = texts.filter((t) => {
-    const ds = t.dataPublicacao || t.prazo || t.dataEntrega;
+    const ds = t.dataPublicacao || t.dataEntrega;
     if (!ds) return false;
     const d = new Date(ds);
     return !isNaN(d) && d.getMonth() === cur.mi && d.getFullYear() === cur.yr;
@@ -3529,7 +3530,7 @@ function CalendarioTab({ calendar, texts, calPautas, setCalPautas }) {
           const hasPautas = (calPautas[m.key] || []).length > 0;
           const hasTexts =
             texts.filter((t) => {
-              const d = new Date(t.prazo || t.dataEntrega || "");
+              const d = new Date(t.dataEntrega || "");
               return (
                 !isNaN(d) && d.getMonth() === m.mi && d.getFullYear() === m.yr
               );
@@ -4364,9 +4365,9 @@ function MeusTextosTab({ texts, colunista, contraExtra={}, setContraExtra, updat
                   <span style={{ fontSize: 11, color: cs.dim }}>
                     {t.editoria}
                   </span>
-                  {(t.prazo || t.dataEntrega) && (
+                  {(t.dataEntrega) && (
                     <span style={{ fontSize: 11, color: cs.dim }}>
-                      Prazo: {t.prazo || t.dataEntrega}
+                      Prazo: {t.dataEntrega}
                     </span>
                   )}
                   <span style={{ fontSize: 11, color: cs.dim }}>
@@ -5092,7 +5093,7 @@ function AppInner() {
             let changed = false;
             const synced = data.sx2_texts.map(t => {
               const sched = schedByKey[t.key];
-              if (sched) {
+              if (sched && !t.dateOverridden) {
                 const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
                 const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
                 if (datesDiffer || hasStalePrazo) {
@@ -5161,7 +5162,7 @@ function AppInner() {
       let datesUpdated = false;
       const syncedTexts = seedTexts.map(t => {
         const sched = scheduleByKey[t.key];
-        if (sched) {
+        if (sched && !t.dateOverridden) {
           const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
           const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
           if (datesDiffer || hasStalePrazo) {
