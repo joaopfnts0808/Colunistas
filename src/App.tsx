@@ -5086,7 +5086,21 @@ function AppInner() {
         const data = await loadAll();
         if (data) {
           // Supabase é confiável — usa diretamente sem merge complexo
-          if (data.sx2_texts) setTexts(data.sx2_texts);
+          if (data.sx2_texts) {
+            // Sempre sincroniza datas com TASK_SCHEDULE ao carregar do Supabase
+            const schedByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
+            let changed = false;
+            const synced = data.sx2_texts.map(t => {
+              const sched = schedByKey[t.key];
+              if (sched && (t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega)) {
+                changed = true;
+                return { ...t, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+              }
+              return t;
+            });
+            setTexts(synced);
+            if (changed) save("sx2_texts", synced);
+          }
           if (data.sx2_contra) setContrapartidas(data.sx2_contra);
           if (data.sx2_contraExtra) setContraExtraState(data.sx2_contraExtra);
         if (data.sx2_readProgress) setReadProgressState(data.sx2_readProgress);
