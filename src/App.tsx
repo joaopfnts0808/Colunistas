@@ -5087,26 +5087,7 @@ function AppInner() {
         const data = await loadAll();
         if (data) {
           // Supabase é confiável — usa diretamente sem merge complexo
-          if (data.sx2_texts) {
-            // Sempre sincroniza datas com TASK_SCHEDULE ao carregar do Supabase
-            const schedByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
-            let changed = false;
-            const synced = data.sx2_texts.map(t => {
-              const sched = schedByKey[t.key];
-              if (sched && !t.dateOverridden) {
-                const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
-                const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
-                if (datesDiffer || hasStalePrazo) {
-                  changed = true;
-                  const { prazo, ...rest } = t;
-                  return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
-                }
-              }
-              return t;
-            });
-            setTexts(synced);
-            if (changed) save("sx2_texts", synced);
-          }
+          if (data.sx2_texts) setTexts(data.sx2_texts);
           if (data.sx2_contra) setContrapartidas(data.sx2_contra);
           if (data.sx2_contraExtra) setContraExtraState(data.sx2_contraExtra);
         if (data.sx2_readProgress) setReadProgressState(data.sx2_readProgress);
@@ -5157,26 +5138,28 @@ function AppInner() {
       const existingKeys = new Set(seedTexts.map(t=>t.key||"").filter(Boolean));
       const missingTasks = TASK_SCHEDULE.filter(task => !existingKeys.has(task.key));
 
-      // Sync dates + limpa campo legado 'prazo' que conflitava com dataEntrega no painel
+      // Migração única de datas (v3): aplica TASK_SCHEDULE no Supabase uma vez só
+      const migrated = await load("sx2_datesV3", false);
       const scheduleByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
-      let datesUpdated = false;
-      const syncedTexts = seedTexts.map(t => {
-        const sched = scheduleByKey[t.key];
-        if (sched && !t.dateOverridden) {
-          const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
-          const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
-          if (datesDiffer || hasStalePrazo) {
-            datesUpdated = true;
-            const { prazo, ...rest } = t;
+      let finalTexts;
+      if (!migrated) {
+        // Aplica datas corretas + remove campo prazo legado
+        finalTexts = seedTexts.map(t => {
+          const sched = scheduleByKey[t.key];
+          if (sched) {
+            const { prazo, dateOverridden, ...rest } = t;
             return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
           }
-        }
-        return t;
-      });
-
-      const allTexts = [...syncedTexts, ...missingTasks];
-      setTexts(allTexts);
-      if(t.length===0 || missingTasks.length > 0 || datesUpdated) save("sx2_texts", allTexts);
+          return t;
+        });
+        finalTexts = [...finalTexts, ...missingTasks.filter(m => !finalTexts.find(f=>f.key===m.key))];
+        await save("sx2_texts", finalTexts);
+        await save("sx2_datesV3", true);
+      } else {
+        finalTexts = [...seedTexts, ...missingTasks.filter(m => !seedTexts.find(f=>f.key===m.key))];
+        if (missingTasks.length > 0) save("sx2_texts", finalTexts);
+      }
+      setTexts(finalTexts);
       setContrapartidas(co);
       setContraExtraState(ce);
       setCalendar(cal);
