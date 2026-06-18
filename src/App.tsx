@@ -2524,6 +2524,15 @@ function PainelTab({ texts, updateTextStatus, notifications, markNotifRead, cont
             >
               <Label c={cs.accent}>Editar Tarefa</Label>
               <div>
+                <Label>Editoria</Label>
+                <Select
+                  value={editField.editoria||detail?.editoria||""}
+                  onChange={(v) => setEditField((f) => ({ ...f, editoria: v }))}
+                  placeholder="— selecione —"
+                  options={EDITORIAS.map(e=>({value:e,label:e}))}
+                />
+              </div>
+              <div>
                 <Label>Briefing</Label>
                 <textarea
                   value={editField.briefing}
@@ -3053,7 +3062,48 @@ function IdeiaTab({
       ))}
 
       {/* Sugestão modal */}
-      {sugestaoModal && (
+      {editIdeia && (
+        <Modal title="Editar Tarefa" onClose={()=>setEditIdeia(null)} width={580}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div>
+              <Label>Título</Label>
+              <Input value={editIdeiaData.titulo||""} onChange={v=>setEditIdeiaData(f=>({...f,titulo:v}))} placeholder="Título da pauta"/>
+            </div>
+            <div>
+              <Label>Editoria</Label>
+              <Select value={editIdeiaData.editoria||""} onChange={v=>setEditIdeiaData(f=>({...f,editoria:v}))}
+                placeholder="— selecione —" options={EDITORIAS.map(e=>({value:e,label:e}))}/>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1}}>
+                <Label>Data de Entrega</Label>
+                <Input type="date" value={editIdeiaData.dataEntrega||""} onChange={v=>setEditIdeiaData(f=>({...f,dataEntrega:v,dateOverridden:true}))}/>
+              </div>
+              <div style={{flex:1}}>
+                <Label>Data de Publicação</Label>
+                <Input type="date" value={editIdeiaData.dataPublicacao||""} onChange={v=>setEditIdeiaData(f=>({...f,dataPublicacao:v,dateOverridden:true}))}/>
+              </div>
+            </div>
+            <div>
+              <Label>Briefing</Label>
+              <textarea value={editIdeiaData.briefing||""} onChange={e=>setEditIdeiaData(f=>({...f,briefing:e.target.value}))}
+                placeholder="Link, instruções ou contexto para o colunista..."
+                style={{width:"100%",background:"var(--s1,#111)",border:"1px solid #333",color:"inherit",padding:"9px 12px",borderRadius:4,fontSize:13,minHeight:80,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <Label>Link</Label>
+              <Input value={editIdeiaData.link||""} onChange={v=>setEditIdeiaData(f=>({...f,link:v}))} placeholder="https://..."/>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={editIdeiaData.status||"Pendente"} onChange={v=>setEditIdeiaData(f=>({...f,status:v}))}
+                placeholder="— status —" options={["Pendente","Enviado","Em Revisão","Publicado","Rejeitado"].map(s=>({value:s,label:s}))}/>
+            </div>
+            <Btn variant="primary" onClick={saveEditIdeia}>Salvar alterações</Btn>
+          </div>
+        </Modal>
+      )}
+            {sugestaoModal && (
         <Modal title="✦ Sugerir Nova Pauta" onClose={()=>setSugestaoModal(false)} width={580}>
           <div style={{background:cs.acBg,border:`1px solid ${cs.acA33}`,borderRadius:6,padding:"12px 14px",marginBottom:16}}>
             <div style={{fontSize:12,color:cs.accent,fontWeight:700,marginBottom:2}}>Destaque para uma nova ideia</div>
@@ -5138,23 +5188,23 @@ function AppInner() {
       const existingKeys = new Set(seedTexts.map(t=>t.key||"").filter(Boolean));
       const missingTasks = TASK_SCHEDULE.filter(task => !existingKeys.has(task.key));
 
-      // Migração única de datas (v3): aplica TASK_SCHEDULE no Supabase uma vez só
-      const migrated = await load("sx2_datesV3", false);
+      // Migração única (v4): aplica datas + editorias do TASK_SCHEDULE no Supabase
+      const migrated = await load("sx2_datesV4", false);
       const scheduleByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
       let finalTexts;
       if (!migrated) {
-        // Aplica datas corretas + remove campo prazo legado
+        // Aplica datas, editoria correta + remove campos legados
         finalTexts = seedTexts.map(t => {
           const sched = scheduleByKey[t.key];
           if (sched) {
             const { prazo, dateOverridden, ...rest } = t;
-            return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+            return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega, editoria: sched.editoria };
           }
           return t;
         });
         finalTexts = [...finalTexts, ...missingTasks.filter(m => !finalTexts.find(f=>f.key===m.key))];
         await save("sx2_texts", finalTexts);
-        await save("sx2_datesV3", true);
+        await save("sx2_datesV4", true);
       } else {
         finalTexts = [...seedTexts, ...missingTasks.filter(m => !seedTexts.find(f=>f.key===m.key))];
         if (missingTasks.length > 0) save("sx2_texts", finalTexts);
@@ -5538,7 +5588,7 @@ function AppInner() {
   {id:20003,colId:9,colunistaNome:"Moon Kenzo",titulo:"O mito do fast-sex: Por que não estou perdendo nada ao recusar 15 minutos de nada",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_0"},
   {id:20004,colId:9,colunistaNome:"Moon Kenzo",titulo:"Turistas da Submissão: você quer o fetiche mas não aguenta",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_1"},
   {id:20005,colId:9,colunistaNome:"Moon Kenzo",titulo:"A Solidão de Quem Transcende: O preço de não ser a fácil",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-24",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"9_2"},
-  {id:20006,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_0"},
+  {id:20006,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Amor e solidão: sentimentos opostos que se parecem nos relacionamentos",editoria:"Práticas Sexuais, Corpo e Relacionamentos",dataPublicacao:"2026-06-22",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_0"},
   {id:20007,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Pajubá e Gualín do TTK: dialetos nascidos na ditadura militar",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-10",dataEntrega:"2026-07-07",horario:"12:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_1"},
   {id:20008,colId:10,colunistaNome:"Sabrina Kali Nogueira Marinho",titulo:"Segregades do amor: a comunidade trans e a exclusão do amor romântico",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-07-29",dataEntrega:"2026-07-24",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"10_2"},
   {id:20009,colId:12,colunistaNome:"Benjamim Siqueira Souto",titulo:"Desconstrução da cisheteronormatividade na arte contemporânea",editoria:"Linguagem Neutra e Inovação Linguística",dataPublicacao:"2026-06-23",dataEntrega:"2026-06-19",horario:"10:00",status:"Pendente",dataSubmissao:"14/06/2026",link:"",obs:"Tarefa do banco de ideias",briefing:"",key:"12_0"},
