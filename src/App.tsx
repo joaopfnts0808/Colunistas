@@ -5092,9 +5092,14 @@ function AppInner() {
             let changed = false;
             const synced = data.sx2_texts.map(t => {
               const sched = schedByKey[t.key];
-              if (sched && (t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega)) {
-                changed = true;
-                return { ...t, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+              if (sched) {
+                const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
+                const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
+                if (datesDiffer || hasStalePrazo) {
+                  changed = true;
+                  const { prazo, ...rest } = t;
+                  return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+                }
               }
               return t;
             });
@@ -5151,14 +5156,19 @@ function AppInner() {
       const existingKeys = new Set(seedTexts.map(t=>t.key||"").filter(Boolean));
       const missingTasks = TASK_SCHEDULE.filter(task => !existingKeys.has(task.key));
 
-      // Sync dates: update any existing task whose dates differ from TASK_SCHEDULE
+      // Sync dates + limpa campo legado 'prazo' que conflitava com dataEntrega no painel
       const scheduleByKey = Object.fromEntries(TASK_SCHEDULE.map(t=>[t.key, t]));
       let datesUpdated = false;
       const syncedTexts = seedTexts.map(t => {
         const sched = scheduleByKey[t.key];
-        if (sched && (t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega)) {
-          datesUpdated = true;
-          return { ...t, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+        if (sched) {
+          const datesDiffer = t.dataPublicacao !== sched.dataPublicacao || t.dataEntrega !== sched.dataEntrega;
+          const hasStalePrazo = t.prazo && t.prazo !== sched.dataEntrega;
+          if (datesDiffer || hasStalePrazo) {
+            datesUpdated = true;
+            const { prazo, ...rest } = t;
+            return { ...rest, dataPublicacao: sched.dataPublicacao, dataEntrega: sched.dataEntrega };
+          }
         }
         return t;
       });
